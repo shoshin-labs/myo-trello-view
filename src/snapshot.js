@@ -65,7 +65,7 @@ export async function snapshotBoard() {
     meta: {
       title: 'Myo live board',
       source_db: DB_PATH,
-      snapshot_at: new Date().toISOString() + 'Z',
+      snapshot_at: new Date().toISOString(),
       card_count: cards.length,
       section_count: sections.length,
     },
