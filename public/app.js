@@ -75,6 +75,15 @@ async function loadStudio() {
   state.snapshot = data;
 }
 
+async function loadNorthStar() {
+  try {
+    const r = await fetch('/api/north-star');
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.present ? data : null;
+  } catch { return null; }
+}
+
 async function loadAll() {
   const r = await fetch('/api/board');
   if (!r.ok) throw new Error(`load board failed: ${r.status}`);
@@ -107,8 +116,13 @@ async function loadAll() {
 async function loadAndRender() {
   setStatus('Loading…');
   try {
-    if (state.view === 'studio') await loadStudio();
-    else await loadAll();
+    if (state.view === 'studio') {
+      await loadStudio();
+      await renderNorthStar();
+    } else {
+      await loadAll();
+      renderNorthStarEmpty();
+    }
     render();
     setStatus(
       state.view === 'studio'
@@ -119,6 +133,114 @@ async function loadAndRender() {
   } catch (e) {
     setStatus('Load failed: ' + e.message, 'err');
   }
+}
+
+// ---------- North Star hero --------------------------------------------------
+
+const NORTH_STAR_DONE_KEYS = {
+  // Maps card titles to "done" state when present on the board.
+  // Wire up here as needed; default-empty so the hero shows as-is.
+};
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function northStarProgress(dod) {
+  if (!dod || !dod.length) return 0;
+  const done = dod.filter((item) => NORTH_STAR_DONE_KEYS[item]).length;
+  return Math.round((done / dod.length) * 100);
+}
+
+async function renderNorthStar() {
+  const host = $('#north-star-host');
+  const data = await loadNorthStar();
+  if (!data) {
+    host.innerHTML = '<div class="north-star-missing">No North Star set. Add a card to the <em>North star (current objective)</em> section to surface it here.</div>';
+    return;
+  }
+  const { card, parsed } = data;
+  const progress = northStarProgress(parsed.dod);
+
+  const ownerHtml = parsed.owner
+    ? `<div><span class="meta-key">Owner</span><span class="meta-val">${escapeHtml(parsed.owner)}</span></div>` : '';
+  const artifactHtml = parsed.expectedArtifact
+    ? `<div><span class="meta-key">Expected artifact</span><span class="meta-val">${escapeHtml(parsed.expectedArtifact)}</span></div>` : '';
+  const ts = data.meta?.snapshot_at ? formatDate(data.meta.snapshot_at) : '';
+
+  const dodHtml = (parsed.dod || []).map((item, i) => {
+    const id = `ns-dod-${i}`;
+    const isDone = !!NORTH_STAR_DONE_KEYS[item];
+    return `<li class="${isDone ? 'done' : ''}" data-id="${id}" data-card="${escapeHtml(item)}">
+              <span>${escapeHtml(item)}</span>
+            </li>`;
+  }).join('');
+
+  const cardHref = `/card.html?id=${encodeURIComponent(card.id)}`;
+
+  host.innerHTML = `
+    <article class="north-star-hero" data-card-id="${escapeHtml(card.id)}">
+      <div class="north-star-eyebrow">North Star · Current Objective</div>
+      <h2 class="north-star-title">${escapeHtml(parsed.title || card.id)}</h2>
+      ${parsed.definitionOfValue ? `<p class="north-star-value">${escapeHtml(parsed.definitionOfValue)}</p>` : ''}
+      <div class="north-star-meta">
+        ${ownerHtml}
+        ${artifactHtml}
+        <div>
+          <span class="meta-key">Last refresh</span>
+          <span class="meta-val">${escapeHtml(ts)}</span>
+        </div>
+      </div>
+
+      <div class="north-star-dod">
+          <div class="north-star-dod-head">
+            <h3>Definition of done</h3>
+            <div class="progress"><div class="progress-bar" style="width:${progress}%"></div></div>
+            <span class="progress-text">${progress}% · ${parsed.dod.length} items</span>
+          </div>
+          <ol class="north-star-dod-list">${dodHtml}</ol>
+        </div>
+
+      <div class="north-star-actions">
+        <a class="ns-link" href="${cardHref}">Read full card →</a>
+        <a class="ns-link ghost" href="javascript:void(0)" id="ns-hide">Hide for now</a>
+      </div>
+    </article>
+  `;
+
+  // Click on a DoD item opens the matching board card if it exists, or copies
+  // the title for manual lookup. For now: toggle "done" locally so you can
+  // track progress against the list as you work.
+  $$('#north-star-host .north-star-dod-list li').forEach((li) => {
+    li.addEventListener('click', (e) => {
+      li.classList.toggle('done');
+      const total = li.parentElement.children.length;
+      const done = li.parentElement.querySelectorAll('.done').length;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      const bar = $('.north-star-dod-head .progress-bar');
+      const text = $('.north-star-dod-head .progress-text');
+      if (bar) bar.style.width = pct + '%';
+      if (text) text.textContent = `${pct}% · ${total} items`;
+    });
+  });
+
+  $('#ns-hide')?.addEventListener('click', () => {
+    host.innerHTML = '';
+    try { localStorage.setItem('myo.ns.hidden', '1'); } catch {}
+    render();   // re-render board so the column also stops showing the north-star card
+  });
+
+  // Render empty placeholder if user previously hid it
+  if (localStorage.getItem('myo.ns.hidden') === '1') {
+    host.innerHTML = '';
+    return;
+  }
+}
+
+function renderNorthStarEmpty() {
+  $('#north-star-host').innerHTML = '';
 }
 
 // ---------- rendering -------------------------------------------------------
@@ -191,7 +313,19 @@ function matchesFilter(card) {
 function cardEl(card) {
   const li = document.createElement('li');
   li.className = 'card';
+  // Mark north-star cards so they stand out in any column they appear in
+  if (/MYO-70\b/.test(card.id) || /MYO-70\s*—/i.test(card.id)) {
+    li.classList.add('north-star');
+  }
   li.dataset.cardId = card.id;
+
+  // If this is the north-star card, add a tiny strip
+  if (li.classList.contains('north-star')) {
+    const strip = document.createElement('div');
+    strip.className = 'ns-strip';
+    strip.textContent = 'North Star';
+    li.append(strip);
+  }
 
   const h = document.createElement('h3');
   h.textContent = card.title || '(untitled)';

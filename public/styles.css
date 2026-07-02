@@ -109,6 +109,12 @@ button.danger:hover { background: #f17466; }
 .status.ok { color: var(--green); }
 .status.err { color: var(--danger); }
 
+.board-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .board {
   display: flex;
   align-items: flex-start;
@@ -119,6 +125,7 @@ button.danger:hover { background: #f17466; }
   min-height: 0;
   background: var(--board-bg);
 }
+.north-star-host { flex: 0 0 auto; }
 
 /* lists / columns */
 .list {
