@@ -1,0 +1,201 @@
+/* Mobile / small-screen refinement. Loaded on every page (zero-cost on desktop). */
+
+/* Base niceties for everyone -------------------------------------------------- */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  -webkit-tap-highlight-color: rgba(0, 184, 217, 0.15);
+  overscroll-behavior-y: contain;
+}
+
+button, .card, .list-header, .label-chip, [role="tab"] {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+input, textarea {
+  font-size: 16px !important;            /* iOS: prevent auto-zoom on focus */
+}
+
+/* Phone / portrait board layout -------------------------------------------- */
+
+@media (max-width: 720px) {
+  body { font-size: 15px; }
+
+  /* Topbar — collapse into two rows */
+  .topbar {
+    flex-wrap: wrap;
+    padding: calc(8px + var(--safe-top)) 12px 8px;
+    gap: 8px;
+  }
+  .topbar-left { flex: 1 1 auto; min-width: 0; }
+  .topbar-left h1 { font-size: 15px; }
+  .topbar-left p { font-size: 11px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .topbar-right {
+    flex: 1 1 100%;
+    order: 2;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .topbar-right > #search { flex: 1 1 100%; min-width: 0; }
+  .topbar-right > .toggle { font-size: 11px; }
+
+  /* Drop the verbose controls on small screens */
+  #refresh span, .toggle-text { display: none; }
+
+  /* View toggle — bigger touch target */
+  .view-btn { padding: 8px 14px; font-size: 13px; }
+
+  /* Board: columns stack vertically, each becomes a contained scroller */
+  .board {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 12px;
+    gap: 14px;
+    align-items: stretch;
+  }
+  .list {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    max-height: none;
+    overflow: hidden;             /* column scroll isolated to .cards */
+  }
+
+  /* Column titles: bigger, bolder, sticky inside the column so you don't lose
+     context as you flick through cards */
+  .list-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px 8px;
+  }
+  .list-header h2 { font-size: 17px; }
+  .list-header .count {
+    font-size: 12px; padding: 3px 10px;
+  }
+  .list-subtitle { display: none; }       /* too much scroll real-estate burned */
+
+  /* Cards: tall card cells = easy tap target, roomy typography */
+  .cards {
+    max-height: 80vh;             /* each column scrolls; tap "expand" to grow */
+    padding: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card {
+    padding: 14px 14px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .card h3 { font-size: 15px; line-height: 1.35; }
+  .card .card-body { font-size: 13px; -webkit-line-clamp: 4; }
+  .label-chip { font-size: 11px; padding: 3px 10px; }
+
+  /* Hover state on touch feels wrong — drop it */
+  .card:hover { background: var(--panel-2); }
+  .card:active { transform: scale(.985); transition: transform .08s ease; }
+
+  /* Hide the "+ List" button on mobile (Studio is curated; + invites ambiguity) */
+  #add-list { display: none; }
+
+  /* Empty state styling */
+  .empty { padding: 16px 0; font-size: 13px; }
+}
+
+/* Very small phones ----------------------------------------------------------- */
+
+@media (max-width: 380px) {
+  .topbar-left h1 { font-size: 14px; }
+  .list-header h2 { font-size: 16px; }
+  .view-btn { padding: 8px 10px; font-size: 12px; }
+}
+
+/* Landscape phone ------------------------------------------------------------ */
+
+@media (min-width: 540px) and (max-width: 920px) and (orientation: landscape) {
+  /* In landscape, two columns side-by-side with horizontal scroll fallback */
+  .board {
+    flex-direction: row;
+    overflow-x: auto;
+    align-items: flex-start;
+  }
+  .list {
+    min-width: 320px;
+    max-width: 360px;
+  }
+}
+
+/* Card reader (mobile-first, but reads like an article everywhere) --------- */
+
+@media (max-width: 720px) {
+  .card-topbar {
+    padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .breadcrumbs { order: 3; flex: 1 1 100%; font-size: 11px; padding-top: 4px; }
+  .back-link { padding: 8px 12px; font-size: 13px; }
+  .ghost { padding: 8px 12px; font-size: 13px; }
+
+  /* Article: bigger type, generous spacing, safe-area aware */
+  .card-article {
+    padding: 16px calc(16px + var(--safe-right)) 120px calc(16px + var(--safe-left));
+    margin: 0 auto 24px;
+    font-size: 17px;
+    line-height: 1.7;
+    max-width: none;
+  }
+  .card-article h1 { font-size: 26px; line-height: 1.18; }
+  .card-meta-line { font-size: 12px; }
+  .prose h2 { font-size: 21px; margin-top: 1.4em; }
+  .prose h3 { font-size: 18px; }
+  .prose h4 { font-size: 16px; }
+  .prose pre {
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 6px;
+  }
+  .prose code { font-size: .92em; }
+  .prose ul, .prose ol { padding-left: 24px; }
+  .prose li { margin: 6px 0; }
+  .prose blockquote { font-size: 15px; padding-left: 12px; }
+  .prose table { font-size: 13px; display: block; overflow-x: auto; }
+  .prose th, .prose td { padding: 8px 10px; }
+
+  /* Bottom action bar (sticky) for prev/next/fullscreen — large thumb targets */
+  .card-article::after {
+    content: '';
+    display: block;
+    height: 88px;
+  }
+}
+
+/* Modal: full-screen sheet on mobile (centered modal is too cramped) --------- */
+
+@media (max-width: 720px) {
+  .modal { align-items: stretch; }
+  .modal-card {
+    border-radius: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: none;
+    padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right))
+            calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  }
+  .modal-card .card-title-input { font-size: 22px; }
+  .modal-actions { padding-top: 12px; border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--panel); }
+  .modal-actions button { padding: 12px 18px; min-height: 44px; }
+  .card-title-input { font-size: 20px; }
+}

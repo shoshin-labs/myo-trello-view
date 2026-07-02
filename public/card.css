@@ -127,3 +127,60 @@
 /* Native fullscreen: hide topbar chrome */
 .card-page.fullscreen .card-topbar { display: none; }
 .card-page.fullscreen .card-article { margin-top: 18px; }
+
+/* Position counter (mobile: this lives in the topbar; desktop: subtle dot) */
+.card-position {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--board-bg);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.desktop-only { display: inline-flex; }
+@media (max-width: 720px) {
+  .desktop-only { display: none; }
+}
+
+/* Mobile bottom action bar (fixed, large touch targets) */
+.mobile-actionbar {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  display: none;             /* shown only on small screens */
+  background: rgba(34, 39, 43, 0.96);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-top: 1px solid var(--border);
+  padding: 8px 10px calc(8px + var(--safe-bottom));
+  gap: 8px;
+  z-index: 50;
+}
+.mobile-actionbar .m-action {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-strong);
+  border-radius: 10px;
+  padding: 12px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  justify-content: center;
+}
+.mobile-actionbar .m-action:active { background: #3a4149; transform: scale(.97); }
+.mobile-actionbar .m-arrow { font-size: 22px; line-height: 1; }
+.mobile-actionbar .m-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.mobile-actionbar .m-action:disabled { opacity: .35; cursor: default; }
+
+@media (max-width: 720px) {
+  .mobile-actionbar { display: flex; }
+}
+
+/* Touch ripple on cards (lightweight, purely cosmetic) */
+.card { -webkit-tap-highlight-color: rgba(0, 184, 217, .18); }

@@ -6,14 +6,16 @@
   <title>Loading card… · Myo board</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/card.css" />
+  <link rel="stylesheet" href="/mobile.css" />
 </head>
 <body class="card-page">
   <header class="card-topbar">
     <a class="back-link" href="/" aria-label="Back to board">← Board</a>
     <div id="card-breadcrumb" class="breadcrumbs"></div>
+    <span id="card-position" class="card-position">— / —</span>
     <span class="spacer"></span>
-    <button id="prev-card" class="ghost" title="Previous card (←)">← Prev</button>
-    <button id="next-card" class="ghost" title="Next card (→)">Next →</button>
+    <button id="prev-card" class="ghost desktop-only" title="Previous card (←)">← Prev</button>
+    <button id="next-card" class="ghost desktop-only" title="Next card (→)">Next →</button>
     <button id="toggle-fullscreen" class="ghost" title="Toggle fullscreen (f)">⛶ Fullscreen</button>
     <span id="card-status" class="status"></span>
   </header>
@@ -24,6 +26,19 @@
     <div id="card-body" class="card-body prose"></div>
   </article>
   <p id="card-error" class="card-error" hidden></p>
+
+  <!-- Mobile bottom action bar -->
+  <nav class="mobile-actionbar" aria-label="Card actions">
+    <button id="m-prev" class="m-action" aria-label="Previous card">
+      <span class="m-arrow">‹</span><span class="m-label">Prev</span>
+    </button>
+    <button id="m-fullscreen" class="m-action" aria-label="Toggle fullscreen">
+      <span>⛶</span><span class="m-label">Full</span>
+    </button>
+    <button id="m-next" class="m-action" aria-label="Next card">
+      <span class="m-arrow">›</span><span class="m-label">Next</span>
+    </button>
+  </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
   <script src="/card.js"></script>

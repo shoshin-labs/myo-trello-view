@@ -86,8 +86,16 @@ async function loadCard(id) {
     $('#card-error').hidden = true;
 
     // Update prev/next button enable state
-    $('#prev-card').disabled = currentIdx <= 0;
-    $('#next-card').disabled = currentIdx < 0 || currentIdx >= studioOrder.length - 1;
+    const hasPrev = currentIdx > 0;
+    const hasNext = currentIdx >= 0 && currentIdx < studioOrder.length - 1;
+    $('#prev-card').disabled = !hasPrev;
+    $('#next-card').disabled = !hasNext;
+    $('#m-prev').disabled = !hasPrev;
+    $('#m-next').disabled = !hasNext;
+
+    $('#card-position').textContent = studioOrder.length
+      ? `${currentIdx + 1} / ${studioOrder.length}`
+      : '— / —';
   } catch (e) {
     $('#card-article').hidden = true;
     $('#card-error').hidden = false;
@@ -121,6 +129,42 @@ function formatDate(s) {
 $('#prev-card').addEventListener('click', () => navigate(-1));
 $('#next-card').addEventListener('click', () => navigate(+1));
 $('#toggle-fullscreen').addEventListener('click', toggleFullscreen);
+$('#m-prev').addEventListener('click', () => navigate(-1));
+$('#m-next').addEventListener('click', () => navigate(+1));
+$('#m-fullscreen').addEventListener('click', toggleFullscreen);
+
+// ---------- swipe gestures --------------------------------------------------
+
+let touchStartX = null;
+let touchStartY = null;
+let touchStartT = 0;
+const SWIPE_MIN_DIST = 60;
+const SWIPE_MAX_TIME = 600;
+const SWIPE_MAX_VERTICAL = 80;
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) return;
+  // ignore touches that begin on interactive controls
+  if (e.target.closest('input,textarea,button,a')) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartT = Date.now();
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (touchStartX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  const dt = Date.now() - touchStartT;
+  touchStartX = touchStartY = null;
+
+  if (dt > SWIPE_MAX_TIME) return;
+  if (Math.abs(dy) > SWIPE_MAX_VERTICAL) return;        // too vertical, probably a scroll
+  if (Math.abs(dx) < SWIPE_MIN_DIST) return;
+  if (dx < 0) navigate(+1);
+  else navigate(-1);
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
