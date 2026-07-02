@@ -1,18 +1,22 @@
 // Myo Trello view — vanilla JS frontend
-// Talks to the small Express backend, renders lists + cards, supports drag-drop,
-// add/edit/move/delete, label chips, markdown preview, filter.
+// Two views:
+//   - Studio (default): curated 5-column projection of current work
+//   - All: full board (every section in board.db)
+//
+// Click a card → /card.html?id=… (full-screen markdown reader).
 
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 const state = {
-  lists: [],
-  cards: {},
+  view: 'studio',                      // 'studio' | 'all'
+  cards: {},                            // id -> { id, listId, title, body, labels, due, members, listTitle, listPath }
+  lists: [],                            // ordered list definitions for current view
   meta: null,
   snapshot: null,
   filter: '',
+  hideEmpty: true,
   editingCardId: null,
-  hideEmpty: false,
 };
 
 const STATUS = $('#status');
@@ -24,52 +28,100 @@ function setStatus(msg, kind = '') {
   }
 }
 
-// ---------- network ----------------------------------------------------------
+// ---------- view preference -------------------------------------------------
 
-async function loadState() {
-  const r = await fetch('/api/state');
-  if (!r.ok) throw new Error(`load state failed: ${r.status}`);
+function loadViewPref() {
+  try { return localStorage.getItem('myo.view') || 'studio'; } catch { return 'studio'; }
+}
+function saveViewPref(v) {
+  try { localStorage.setItem('myo.view', v); } catch {}
+}
+function setView(v) {
+  state.view = v;
+  saveViewPref(v);
+  $$('.view-btn').forEach((b) => b.classList.toggle('active', b.id === `view-${v}`));
+  loadAndRender();
+}
+
+// ---------- network ---------------------------------------------------------
+
+async function loadStudio() {
+  const r = await fetch('/api/studio');
+  if (!r.ok) throw new Error(`load studio failed: ${r.status}`);
   const data = await r.json();
-  state.lists = data.lists || [];
-  state.cards = data.cards || {};
-  state.meta  = data.meta || {};
-  state.snapshot = data.snapshots || {};
+  state.cards = {};
+  state.lists = [];
+  for (const col of data.columns) {
+    state.lists.push({
+      id: col.id,
+      title: col.title,
+      path: col.title,
+      virtual: true,
+      description: col.description,
+    });
+    for (const card of col.cards) {
+      state.cards[card.id] = {
+        id: card.id,
+        listId: col.id,
+        title: card.id,
+        body: card.body,
+        labels: card.synthetic_id ? [{ name: 'synthetic', class: 'synthetic' }] : [],
+        listTitle: col.title,
+        listPath: card.sectionPath || card.sectionTitle,
+      };
+    }
+  }
+  state.meta = data.meta;
+  state.snapshot = data;
 }
 
-async function persistState() {
-  const body = {
-    title: 'Myo board',
-    lists: state.lists,
-    cards: state.cards,
-    snapshots: state.snapshot,
-    meta: state.meta,
-  };
-  await fetch('/api/state', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+async function loadAll() {
+  const r = await fetch('/api/board');
+  if (!r.ok) throw new Error(`load board failed: ${r.status}`);
+  const data = await r.json();
+  state.cards = {};
+  state.lists = [];
+  for (const section of data.sections) {
+    state.lists.push({
+      id: section.key,
+      title: section.title,
+      path: section.path,
+      virtual: false,
+    });
+    for (const card of section.cards || []) {
+      state.cards[card.id] = {
+        id: card.id,
+        listId: section.key,
+        title: card.id,
+        body: card.body,
+        labels: card.synthetic_id ? [{ name: 'synthetic', class: 'synthetic' }] : [],
+        listTitle: section.title,
+        listPath: section.path,
+      };
+    }
+  }
+  state.meta = data.meta;
+  state.snapshot = data;
 }
 
-async function refreshFromBoard() {
-  setStatus('Refreshing…');
+async function loadAndRender() {
+  setStatus('Loading…');
   try {
-    const r = await fetch('/api/refresh', { method: 'POST' });
-    if (!r.ok) throw new Error(r.statusText);
-    const r2 = await fetch('/api/state');
-    const data = await r2.json();
-    state.lists = data.lists || [];
-    state.cards = data.cards || {};
-    state.meta = data.meta || {};
-    state.snapshot = data.snapshots || {};
+    if (state.view === 'studio') await loadStudio();
+    else await loadAll();
     render();
-    setStatus(`Refreshed — ${Object.keys(state.cards).length} cards`, 'ok');
+    setStatus(
+      state.view === 'studio'
+        ? `Studio · ${Object.keys(state.cards).length} active cards`
+        : `All · ${Object.keys(state.cards).length} cards / ${state.lists.length} lists`,
+      'ok'
+    );
   } catch (e) {
-    setStatus('Refresh failed: ' + e.message, 'err');
+    setStatus('Load failed: ' + e.message, 'err');
   }
 }
 
-// ---------- rendering --------------------------------------------------------
+// ---------- rendering -------------------------------------------------------
 
 function listEl(list) {
   const wrap = document.createElement('section');
@@ -93,6 +145,13 @@ function listEl(list) {
   header.append(path, h2, count);
   wrap.append(header);
 
+  if (list.description) {
+    const sub = document.createElement('p');
+    sub.className = 'list-subtitle';
+    sub.textContent = list.description;
+    wrap.append(sub);
+  }
+
   const ul = document.createElement('ul');
   ul.className = 'cards';
   ul.dataset.listId = list.id;
@@ -101,21 +160,12 @@ function listEl(list) {
   if (!cardIds.length) {
     const empty = document.createElement('li');
     empty.className = 'empty';
-    empty.textContent = 'No cards yet.';
+    empty.textContent = 'Nothing here.';
     ul.append(empty);
   } else {
     for (const cid of cardIds) ul.append(cardEl(state.cards[cid]));
   }
   wrap.append(ul);
-
-  const footer = document.createElement('div');
-  footer.className = 'list-footer';
-  const add = document.createElement('button');
-  add.className = 'add-card';
-  add.textContent = '＋ Add a card';
-  add.onclick = () => openCardModal(null, list.id);
-  footer.append(add);
-  wrap.append(footer);
 
   return wrap;
 }
@@ -124,7 +174,6 @@ function cardsForList(listId) {
   return Object.values(state.cards)
     .filter((c) => c.listId === listId)
     .filter(matchesFilter)
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map((c) => c.id);
 }
 
@@ -133,7 +182,9 @@ function matchesFilter(card) {
   const f = state.filter.toLowerCase();
   return (
     (card.title || '').toLowerCase().includes(f) ||
-    (card.body   || '').toLowerCase().includes(f)
+    (card.listTitle || '').toLowerCase().includes(f) ||
+    (card.listPath || '').toLowerCase().includes(f) ||
+    (card.body || '').toLowerCase().includes(f)
   );
 }
 
@@ -141,8 +192,6 @@ function cardEl(card) {
   const li = document.createElement('li');
   li.className = 'card';
   li.dataset.cardId = card.id;
-  li.draggable = true;
-  attachCardDnD(li);
 
   const h = document.createElement('h3');
   h.textContent = card.title || '(untitled)';
@@ -163,13 +212,18 @@ function cardEl(card) {
   if (card.body) {
     const p = document.createElement('div');
     p.className = 'card-body';
-    // tiny plain-text excerpt (markdown stripped lightly for safety in card cells)
     p.textContent = stripMd(card.body).slice(0, 220);
     li.append(p);
   }
 
-  li.addEventListener('click', (e) => {
-    openCardModal(card.id);
+  // Studio view: open in full-screen reader (not the small modal).
+  // All view: small inline edit feels more apt when you're reorganising.
+  li.addEventListener('click', () => {
+    if (state.view === 'studio') {
+      location.href = `/card.html?id=${encodeURIComponent(card.id)}`;
+    } else {
+      openCardModal(card.id);
+    }
   });
 
   return li;
@@ -196,7 +250,7 @@ function render() {
     board.append(listEl(list));
     shown += 1;
   }
-  const meta = state.snapshot?.meta || state.meta || {};
+  const meta = state.meta || {};
   const stamp = formatDate(meta.snapshot_at || meta.snapshot);
   $('#board-meta').textContent =
     `${Object.keys(state.cards).length} cards · ${shown}/${total} lists` +
@@ -207,7 +261,7 @@ function formatDate(s) {
   try { return new Date(s).toLocaleString(); } catch { return s; }
 }
 
-// ---------- card modal -------------------------------------------------------
+// ---------- card modal (only used in "All" view for quick edits) ------------
 
 const modal = $('#card-modal');
 const backdrop = $('#modal-backdrop');
@@ -217,11 +271,10 @@ function openCardModal(cardId, listId) {
   let card = cardId ? state.cards[cardId] : null;
 
   if (!card) {
-    const id = 'CARD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const id = 'NEW-' + Date.now().toString(36).toUpperCase();
     card = { id, title: '', body: '', listId: listId, labels: [] };
   }
 
-  // populate
   $('#card-title').value = card.title || '';
   $('#card-body').value  = card.body  || '';
   $('#card-body-preview').innerHTML = marked.parse(card.body || '');
@@ -234,7 +287,6 @@ function openCardModal(cardId, listId) {
     sel.append(o);
   }
 
-  // labels
   const chipRow = $('#card-labels');
   chipRow.innerHTML = '';
   for (const l of card.labels) chipRow.append(makeLabelChip(l));
@@ -261,26 +313,25 @@ function makeLabelChip(label) {
   return chip;
 }
 
-const PRESET_LABEL_COLORS = ['warn', 'danger', 'green', '', 'synthetic'];
-
-function addLabel(label) {
-  if (!label || !label.name) return null;
-  label.class = label.class || PRESET_LABEL_COLORS[Math.floor(Math.random() * PRESET_LABEL_COLORS.length)];
-  $('#card-labels').append(makeLabelChip(label));
-  return label;
-}
-
 $('#card-labels-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const v = e.target.value.trim();
     if (!v) return;
-    addLabel({ name: v });
+    const chip = makeLabelChip({ name: v });
+    $('#card-labels').append(chip);
     e.target.value = '';
   }
 });
 
 $('#card-body').addEventListener('input', (e) => {
   $('#card-body-preview').innerHTML = marked.parse(e.target.value || '');
+});
+
+// "Open fullscreen" inside the modal
+$('#card-open-fullscreen').addEventListener('click', () => {
+  if (state.editingCardId) {
+    location.href = `/card.html?id=${encodeURIComponent(state.editingCardId)}`;
+  }
 });
 
 function readModalIntoCard() {
@@ -298,51 +349,24 @@ function readModalIntoCard() {
   const body = $('#card-body').value;
   if (id && state.cards[id]) {
     Object.assign(state.cards[id], { title: $('#card-title').value.trim(), body, listId, labels });
-  } else {
-    const newId = 'NEW-' + Date.now().toString(36).toUpperCase();
-    state.cards[newId] = {
-      id: newId, title: $('#card-title').value.trim(), body, listId, labels,
-      members: [], due: null, createdAt: new Date().toISOString(),
-    };
-    if (!state.lists.find((l) => l.id === listId)) {
-      // safety net
-    }
   }
 }
 
-$('#card-save').addEventListener('click', async () => {
+// Modal Save only persists client-side state in memory (this app doesn't
+// write to board.db — read-only projection). Save just closes.
+$('#card-save').addEventListener('click', () => {
   readModalIntoCard();
-  await persistState();
   render();
   closeCardModal();
 });
 
 $('#card-cancel').addEventListener('click', closeCardModal);
-$('#card-delete').addEventListener('click', async () => {
-  if (!state.editingCardId) return;
-  if (state.editingCardId in state.cards) {
-    if (!confirm('Delete this card?')) return;
-    delete state.cards[state.editingCardId];
-    await persistState();
-    render();
-    closeCardModal();
-  }
-});
 backdrop.addEventListener('click', closeCardModal);
 
-// ---------- add list ---------------------------------------------------------
+// ---------- topbar bindings -------------------------------------------------
 
-$('#add-list').addEventListener('click', async () => {
-  const title = prompt('New list title?');
-  if (!title) return;
-  const id = 'LIST-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)
-    + '-' + Math.random().toString(36).slice(2, 6);
-  state.lists.push({ id, title, path: title, virtual: true });
-  await persistState();
-  render();
-});
-
-// ---------- filter / hide-empty ----------------------------------------------
+$('#view-studio').addEventListener('click', () => setView('studio'));
+$('#view-all').addEventListener('click',    () => setView('all'));
 
 $('#search').addEventListener('input', (e) => {
   state.filter = e.target.value.trim();
@@ -354,64 +378,69 @@ $('#hide-empty').addEventListener('change', (e) => {
   render();
 });
 
-$('#refresh').addEventListener('click', refreshFromBoard);
+$('#refresh').addEventListener('click', loadAndRender);
 
-// ---------- drag and drop ----------------------------------------------------
+$('#add-list').addEventListener('click', () => {
+  // Only meaningful in All view (Studio is curated)
+  if (state.view !== 'all') {
+    alert('Virtual lists can only be added in the All view. Switch to All to reorganise.');
+    return;
+  }
+  const title = prompt('New list title?');
+  if (!title) return;
+  const id = 'LIST-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)
+    + '-' + Math.random().toString(36).slice(2, 6);
+  state.lists.push({ id, title, path: title, virtual: true });
+  render();
+});
+
+// ---------- Drag & drop (only meaningful in All view) -----------------------
 
 function attachDnD(ul) {
   ul.addEventListener('dragover', (e) => {
+    if (state.view !== 'all') return;
     e.preventDefault();
     ul.classList.add('drop-target');
   });
   ul.addEventListener('dragleave', () => ul.classList.remove('drop-target'));
-  ul.addEventListener('drop', async (e) => {
+  ul.addEventListener('drop', (e) => {
+    if (state.view !== 'all') return;
     e.preventDefault();
     ul.classList.remove('drop-target');
+    // Note: move is presentation-only because we don't write to board.db.
     const cardId = e.dataTransfer.getData('text/card-id');
     if (!cardId || !state.cards[cardId]) return;
     state.cards[cardId].listId = ul.dataset.listId;
-    // recompute order: drop at end
-    const sib = cardsForList(ul.dataset.listId).filter((id) => id !== cardId);
-    let order = 1;
-    for (const id of sib) {
-      state.cards[id].order = order++;
-      state.cards[cardId].order = order;
-    }
-    await persistState();
     render();
   });
 }
 
-function attachCardDnD(li) {
-  li.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/card-id', li.dataset.cardId);
-    e.dataTransfer.effectAllowed = 'move';
-    li.classList.add('dragging');
-    dragMoved.add(li.dataset.cardId);
-  });
-  li.addEventListener('dragend', () => li.classList.remove('dragging'));
-}
-
-// Track cards whose drag actually moved so a click after a tiny drag doesn't open the modal.
-const dragMoved = new Set();
-document.addEventListener('click', (e) => {
-  const card = e.target.closest('.card');
-  if (!card) return;
-  if (dragMoved.has(card.dataset.cardId)) {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    dragMoved.delete(card.dataset.cardId);
+// Add card-row level draggable for All view only
+const cardObserver = new MutationObserver(() => {
+  if (state.view !== 'all') {
+    $$('.card').forEach((li) => li.draggable = false);
+    return;
   }
-}, true);
+  $$('.card').forEach((li) => {
+    li.draggable = true;
+    if (!li._wired) {
+      li.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/card-id', li.dataset.cardId);
+        e.dataTransfer.effectAllowed = 'move';
+        li.classList.add('dragging');
+      });
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+      li._wired = true;
+    }
+  });
+});
+cardObserver.observe($('#board'), { childList: true, subtree: true });
 
-// ---------- init -------------------------------------------------------------
+// ---------- init ------------------------------------------------------------
 
 (async function init() {
-  try {
-    await loadState();
-    render();
-    setStatus('Loaded', 'ok');
-  } catch (e) {
-    setStatus('Failed to load: ' + e.message, 'err');
-  }
+  state.view = loadViewPref();
+  $$('.view-btn').forEach((b) => b.classList.toggle('active', b.id === `view-${state.view}`));
+  document.getElementById('hide-empty').checked = state.hideEmpty;
+  await loadAndRender();
 })();

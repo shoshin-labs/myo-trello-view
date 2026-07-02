@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loading card… · Myo board</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/card.css" />
+</head>
+<body class="card-page">
+  <header class="card-topbar">
+    <a class="back-link" href="/" aria-label="Back to board">← Board</a>
+    <div id="card-breadcrumb" class="breadcrumbs"></div>
+    <span class="spacer"></span>
+    <button id="prev-card" class="ghost" title="Previous card (←)">← Prev</button>
+    <button id="next-card" class="ghost" title="Next card (→)">Next →</button>
+    <button id="toggle-fullscreen" class="ghost" title="Toggle fullscreen (f)">⛶ Fullscreen</button>
+    <span id="card-status" class="status"></span>
+  </header>
+  <article id="card-article" class="card-article" hidden>
+    <h1 id="card-h1"></h1>
+    <p id="card-meta-line" class="card-meta-line"></p>
+    <div id="card-labels" class="label-row"></div>
+    <div id="card-body" class="card-body prose"></div>
+  </article>
+  <p id="card-error" class="card-error" hidden></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
+  <script src="/card.js"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { snapshotBoard } from './snapshot.js';
+import { projectStudio } from './studio.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -88,6 +89,62 @@ async function ensureStateFromSnapshot() {
 app.get('/api/board', async (_req, res) => {
   const snap = await snapshotBoard();
   res.json(snap);
+});
+
+// Studio: curated current-state projection
+app.get('/api/studio', async (_req, res) => {
+  const snap = await snapshotBoard();
+  const projection = projectStudio(snap);
+  res.json({
+    ...projection,
+    meta: {
+      title: 'Studio — Myo board',
+      source_db: snap.meta.source_db,
+      snapshot_at: snap.meta.snapshot_at,
+    },
+  });
+});
+
+// Full-screen card data (uses last studio projection + state)
+app.get('/api/card/:id', async (req, res) => {
+  const snap = await snapshotBoard();
+  const cardId = decodeURIComponent(req.params.id);
+  for (const section of snap.sections) {
+    for (const card of section.cards || []) {
+      if (card.id === cardId) {
+        return res.json({
+          card: { ...card, sectionKey: section.key, sectionTitle: section.title, sectionPath: section.path },
+          meta: snap.meta,
+        });
+      }
+    }
+  }
+  res.status(404).json({ error: 'card not found', id: cardId });
+});
+
+// Browse flat card list (All view)
+app.get('/api/cards', async (_req, res) => {
+  const snap = await snapshotBoard();
+  const flat = [];
+  for (const section of snap.sections) {
+    for (const card of section.cards || []) {
+      flat.push({
+        id: card.id,
+        listId: section.key,
+        listTitle: section.title,
+        listPath: section.path,
+        body: card.body,
+        synthetic: !!card.synthetic_id,
+      });
+    }
+  }
+  res.json({ meta: snap.meta, cards: flat });
+});
+
+// All section paths (for breadcrumb)
+app.get('/api/sections', async (_req, res) => {
+  const snap = await snapshotBoard();
+  res.json({ sections: snap.sections.map((s) => ({ key: s.key, title: s.title, path: s.path, level: s.level })) });
 });
 
 app.get('/api/state', async (_req, res) => {

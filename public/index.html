@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Myo board · Trello view</title>
+  <title>Myo board · Studio</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300B8D9'/%3E%3Crect x='6' y='8' width='6' height='18' rx='2' fill='white'/%3E%3Crect x='14' y='8' width='6' height='14' rx='2' fill='white' opacity='.7'/%3E%3Crect x='22' y='8' width='4' height='10' rx='2' fill='white' opacity='.5'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -17,11 +17,15 @@
       </div>
     </div>
     <div class="topbar-right">
+      <div class="view-toggle" role="tablist" aria-label="View">
+        <button id="view-studio" class="view-btn active" role="tab">Studio</button>
+        <button id="view-all"    class="view-btn"        role="tab">All</button>
+      </div>
       <input id="search" placeholder="Filter cards…" />
-      <button id="refresh" title="Re-pull snapshot from board.db">↻ Refresh</button>
+      <button id="refresh" title="Re-pull from board.db">↻ Refresh</button>
       <button id="add-list" class="primary">+ List</button>
       <label class="toggle">
-        <input type="checkbox" id="hide-empty"> Hide empty lists
+        <input type="checkbox" id="hide-empty" checked> Hide empty lists
       </label>
       <span id="status" class="status"></span>
     </div>
@@ -29,7 +33,7 @@
 
   <main id="board" class="board"></main>
 
-  <!-- Card modal -->
+  <!-- Card modal (legacy edit-on-the-spot, still useful) -->
   <div id="card-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-card">
       <input id="card-title" class="card-title-input" />
@@ -50,6 +54,7 @@
         <select id="card-list"></select>
       </div>
       <div class="modal-actions">
+        <button id="card-open-fullscreen" class="ghost">Open fullscreen ↗</button>
         <button id="card-delete" class="danger">Delete</button>
         <span class="spacer"></span>
         <button id="card-cancel">Cancel</button>
