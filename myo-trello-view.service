@@ -1,0 +1,16 @@
+[Unit]
+Description=Myo board — Trello view (Tailscale-only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/lib/hermes-agent/work/myo-trello-view
+Environment=PORT=18714
+Environment=HOST=0.0.0.0
+ExecStart=/var/lib/hermes-agent/.local/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

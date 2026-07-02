@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Myo board · Trello view</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300B8D9'/%3E%3Crect x='6' y='8' width='6' height='18' rx='2' fill='white'/%3E%3Crect x='14' y='8' width='6' height='14' rx='2' fill='white' opacity='.7'/%3E%3Crect x='22' y='8' width='4' height='10' rx='2' fill='white' opacity='.5'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-mark"></span>
+      <div>
+        <h1>Myo board</h1>
+        <p id="board-meta">loading…</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <input id="search" placeholder="Filter cards…" />
+      <button id="refresh" title="Re-pull snapshot from board.db">↻ Refresh</button>
+      <button id="add-list" class="primary">+ List</button>
+      <label class="toggle">
+        <input type="checkbox" id="hide-empty"> Hide empty lists
+      </label>
+      <span id="status" class="status"></span>
+    </div>
+  </header>
+
+  <main id="board" class="board"></main>
+
+  <!-- Card modal -->
+  <div id="card-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <input id="card-title" class="card-title-input" />
+      <div class="modal-section">
+        <h3>Labels</h3>
+        <div id="card-labels" class="label-chips"></div>
+        <input id="card-labels-input" placeholder="Add label and press Enter" />
+      </div>
+      <div class="modal-section">
+        <h3>Description</h3>
+        <div class="split">
+          <textarea id="card-body" placeholder="Markdown supported"></textarea>
+          <div id="card-body-preview" class="preview"></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <h3>List</h3>
+        <select id="card-list"></select>
+      </div>
+      <div class="modal-actions">
+        <button id="card-delete" class="danger">Delete</button>
+        <span class="spacer"></span>
+        <button id="card-cancel">Cancel</button>
+        <button id="card-save" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+  <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@14.1.4/marked.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

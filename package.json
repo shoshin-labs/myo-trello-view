@@ -1,0 +1,17 @@
+{
+  "name": "myo-trello-view",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Trello-style live view of the Myo Kanban board (read-only snapshot + writable scratch layer backed to disk).",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "marked": "^14.1.4",
+    "better-sqlite3": "^11.7.0"
+  }
+}
