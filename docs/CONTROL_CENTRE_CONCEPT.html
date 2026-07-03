@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Myo Control Centre — Concept</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300B8D9'/%3E%3Crect x='6' y='8' width='6' height='18' rx='2' fill='white'/%3E%3Crect x='14' y='8' width='6' height='14' rx='2' fill='white' opacity='.7'/%3E%3Crect x='22' y='8' width='4' height='10' rx='2' fill='white' opacity='.5'/%3E%3C/svg%3E" />
+<style>
+:root{
+  --accent:#00B8D9; --accent-2:#4FC3F7; --accent-soft:#1c3d4d;
+  --success:#5cd07e; --warn:#f3c969; --danger:#eb5a46; --block:#c97cf3;
+  --bg:#0e1217; --bg-elev:#161b22; --panel:#1e242c; --panel-2:#262d36;
+  --border:#2f3942; --text:#b6c2cf; --text-strong:#e7edf3; --muted:#8a96a4;
+  --shadow-1:0 2px 8px rgba(0,0,0,.45);
+  --shadow-2:0 18px 50px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(1200px 800px at 90% -10%,rgba(0,184,217,.08),transparent 60%),
+    radial-gradient(1100px 700px at -10% 90%,rgba(79,195,247,.06),transparent 55%),var(--bg);
+  color:var(--text);font-size:14px;line-height:1.45;overflow:hidden;height:100vh;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font:inherit;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#2a313a;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a424c}
+
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-columns:64px 1fr 360px;grid-template-rows:56px 1fr;height:100vh;gap:0}
+
+/* Side rail */
+.rail{grid-row:1/3;background:rgba(14,18,23,.7);backdrop-filter:blur(14px);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;z-index:10}
+.rail-logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:grid;place-items:center;color:#001a22;font-weight:800;font-size:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(0,184,217,.35)}
+.rail-btn{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;color:var(--muted);
+  position:relative;transition:all .15s}
+.rail-btn:hover{background:var(--panel);color:var(--text-strong)}
+.rail-btn.active{background:var(--panel-2);color:var(--accent)}
+.rail-btn.active::before{content:'';position:absolute;left:-8px;top:10px;bottom:10px;width:3px;background:var(--accent);border-radius:2px}
+.rail-btn .badge{position:absolute;top:4px;right:4px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:1.3}
+.rail-spacer{flex:1}
+.rail-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#eb5a46,#f3c969);
+  display:grid;place-items:center;color:#1a0e08;font-weight:700;font-size:13px;cursor:pointer}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;padding:0 20px;gap:16px;border-bottom:1px solid var(--border);
+  background:rgba(22,27,34,.85);backdrop-filter:blur(14px);z-index:5}
+.topbar h1{margin:0;font-size:15px;font-weight:600;color:var(--text-strong);letter-spacing:-.01em}
+.topbar .crumb{color:var(--muted);font-size:13px;margin-left:8px}
+.search{flex:1;max-width:520px;position:relative}
+.search input{width:100%;background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:8px 12px 8px 36px;
+  color:var(--text-strong);font-size:13px;transition:all .15s}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,184,217,.15)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.kbd{background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;
+  color:var(--muted);font-family:'SF Mono',Menlo,monospace;position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.iconbtn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--muted);transition:all .15s}
+.iconbtn:hover{background:var(--panel);color:var(--text-strong)}
+.live-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:14px;
+  background:rgba(92,208,126,.12);color:var(--success);font-size:12px;font-weight:500}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);
+  animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Main */
+.main{overflow-y:auto;padding:24px 32px 48px}
+.view{display:none}
+.view.active{display:block}
+
+/* North star card */
+.ns{background:linear-gradient(135deg,rgba(0,184,217,.1),rgba(79,195,247,.04));
+  border:1px solid rgba(0,184,217,.3);border-radius:14px;padding:22px 26px;margin-bottom:24px;
+  box-shadow:0 12px 40px -12px rgba(0,184,217,.25),0 6px 16px rgba(0,0,0,.4);position:relative;overflow:hidden}
+.ns::after{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,184,217,.15),transparent 70%);pointer-events:none}
+.ns-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.ns-title{font-size:22px;font-weight:700;color:var(--text-strong);letter-spacing:-.015em;margin-bottom:14px;line-height:1.25}
+.ns-progress{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.ns-bar{flex:1;height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;position:relative}
+.ns-bar-fill{position:absolute;left:0;top:0;bottom:0;width:33%;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  border-radius:3px;box-shadow:0 0 12px rgba(0,184,217,.4)}
+.ns-pct{font-size:13px;font-weight:600;color:var(--text-strong);font-variant-numeric:tabular-nums}
+.ns-dod{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:14px}
+.ns-dod div{font-size:12.5px;color:var(--text);display:flex;align-items:flex-start;gap:8px}
+.ns-dod .check{color:var(--success);flex-shrink:0;margin-top:1px;font-weight:700}
+.ns-dod .check.pending{color:var(--muted)}
+.ns-meta{display:flex;gap:14px;margin-top:14px;font-size:12px;color:var(--muted)}
+.ns-meta b{color:var(--text);font-weight:500}
+
+/* Section header */
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 14px}
+.sec-head h2{margin:0;font-size:13px;font-weight:600;color:var(--text-strong);letter-spacing:.02em;
+  text-transform:uppercase}
+.sec-head .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* 4-column studio grid */
+.studio{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px}
+.col{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0;min-height:200px;
+  display:flex;flex-direction:column}
+.col-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.col-head .title{font-size:12.5px;font-weight:600;color:var(--text-strong);letter-spacing:.02em;text-transform:uppercase}
+.col-head .count{font-size:11px;color:var(--muted);background:var(--panel-2);padding:2px 8px;border-radius:10px;font-weight:600}
+.col-body{padding:8px;display:flex;flex-direction:column;gap:6px;flex:1}
+.col[data-tone="triage"] .col-head .title{color:var(--warn)}
+.col[data-tone="ready"] .col-head .title{color:var(--accent-2)}
+.col[data-tone="progress"] .col-head .title{color:var(--accent)}
+.col[data-tone="blocked"] .col-head .title{color:var(--danger)}
+
+.card{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;
+  transition:all .15s;position:relative}
+.card:hover{border-color:var(--accent);background:#2c343f;transform:translateY(-1px)}
+.card-id{font-size:10.5px;color:var(--muted);font-family:'SF Mono',Menlo,monospace;letter-spacing:.04em;margin-bottom:4px}
+.card-title{font-size:13px;font-weight:500;color:var(--text-strong);line-height:1.35;margin-bottom:6px}
+.card-meta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.card-meta .who{display:inline-flex;align-items:center;gap:4px}
+.avatar-mini{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#eb5a46,#f3c969);
+  display:inline-grid;place-items:center;color:#1a0e08;font-size:9px;font-weight:700}
+.card-meta .assignee{font-weight:500;color:var(--text)}
+.card-meta .age{margin-left:auto}
+.card-running::before{content:'';position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.5s infinite}
+.card-blocked::before{content:'';position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;
+  background:var(--danger);box-shadow:0 0 8px var(--danger)}
+
+/* Live activity stream */
+.activity{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0;margin-bottom:24px}
+.activity-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.activity-head h2{margin:0;font-size:13px;font-weight:600;color:var(--text-strong);letter-spacing:.02em;text-transform:uppercase}
+.activity-body{padding:6px 0;max-height:240px;overflow-y:auto}
+.act-row{padding:8px 18px;display:flex;align-items:flex-start;gap:10px;font-size:12.5px;
+  border-bottom:1px solid rgba(47,57,66,.4)}
+.act-row:last-child{border-bottom:none}
+.act-time{color:var(--muted);font-variant-numeric:tabular-nums;flex-shrink:0;font-size:11.5px;margin-top:1px}
+.act-icon{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex-shrink:0;font-size:11px;font-weight:700}
+.act-icon.send{background:rgba(0,184,217,.15);color:var(--accent)}
+.act-icon.dispatch{background:rgba(79,195,247,.15);color:var(--accent-2)}
+.act-icon.done{background:rgba(92,208,126,.15);color:var(--success)}
+.act-icon.block{background:rgba(235,90,70,.15);color:var(--danger)}
+.act-text{flex:1}
+.act-text b{color:var(--text-strong);font-weight:600}
+.act-text .ref{color:var(--accent);font-family:'SF Mono',Menlo,monospace;font-size:11.5px}
+
+/* Right pane — "needs Tom" */
+.right-pane{background:rgba(22,27,34,.6);backdrop-filter:blur(14px);border-left:1px solid var(--border);
+  overflow-y:auto;padding:18px 18px 36px;display:flex;flex-direction:column;gap:18px}
+.pane-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pane-h h2{margin:0;font-size:12px;font-weight:600;color:var(--text-strong);letter-spacing:.04em;text-transform:uppercase}
+.pane-h .count{font-size:11px;color:var(--danger);background:rgba(235,90,70,.15);padding:1px 7px;border-radius:8px;font-weight:700}
+.need-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;
+  border-left:3px solid var(--danger);cursor:pointer;transition:all .15s}
+.need-card:hover{border-color:var(--accent);background:var(--panel-2)}
+.need-card[data-tone="block"]{border-left-color:var(--danger)}
+.need-card[data-tone="wait"]{border-left-color:var(--warn)}
+.need-card[data-tone="ask"]{border-left-color:var(--block)}
+.need-label{font-size:10.5px;font-weight:700;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.need-card[data-tone="wait"] .need-label{color:var(--warn)}
+.need-card[data-tone="ask"] .need-label{color:var(--block)}
+.need-from{font-size:12px;color:var(--text-strong);font-weight:600;margin-bottom:3px}
+.need-subj{font-size:12.5px;color:var(--text);margin-bottom:8px;line-height:1.4}
+.need-body{font-size:11.5px;color:var(--muted);line-height:1.5;padding:8px 10px;background:var(--bg-elev);
+  border-radius:6px;border:1px solid var(--border);margin-bottom:10px}
+.need-actions{display:flex;gap:6px}
+.need-btn{flex:1;padding:6px 8px;font-size:11.5px;border-radius:6px;font-weight:500;transition:all .15s;
+  border:1px solid var(--border);background:var(--bg-elev);color:var(--text);text-align:center}
+.need-btn:hover{border-color:var(--accent);color:var(--accent)}
+.need-btn.primary{background:var(--accent);color:#001a22;border-color:var(--accent);font-weight:600}
+.need-btn.primary:hover{background:var(--accent-2);color:#001a22}
+
+/* People / CRM view */
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.person{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .15s}
+.person:hover{border-color:var(--accent);background:var(--panel-2)}
+.person-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.person-avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#001a22}
+.person-name{font-size:14px;font-weight:600;color:var(--text-strong)}
+.person-tag{font-size:11px;color:var(--muted)}
+.person-stat{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:11.5px}
+.person-stat .k{color:var(--muted)}
+.person-stat .v{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+.person-state{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;margin-top:8px}
+.person-state[data-state="live"]{background:rgba(92,208,126,.15);color:var(--success)}
+.person-state[data-state="warm"]{background:rgba(0,184,217,.15);color:var(--accent)}
+.person-state[data-state="cold"]{background:rgba(138,150,164,.15);color:var(--muted)}
+.person-state[data-state="blocked"]{background:rgba(235,90,70,.15);color:var(--danger)}
+
+/* Timeline view */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:14px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-row{position:relative;padding:10px 0 14px;display:grid;grid-template-columns:120px 1fr;gap:18px}
+.tl-row::before{content:'';position:absolute;left:-22px;top:14px;width:10px;height:10px;border-radius:50%;
+  background:var(--bg-elev);border:2px solid var(--border)}
+.tl-row[data-tone="done"]::before{background:var(--success);border-color:var(--success)}
+.tl-row[data-tone="live"]::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent)}
+.tl-row[data-tone="block"]::before{background:var(--danger);border-color:var(--danger)}
+.tl-when{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;padding-top:1px}
+.tl-what{font-size:13px;color:var(--text)}
+.tl-what b{color:var(--text-strong);font-weight:600}
+.tl-what .ref{color:var(--accent);font-family:'SF Mono',Menlo,monospace;font-size:11.5px}
+
+/* Command palette */
+.cmdk{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  display:none;align-items:flex-start;justify-content:center;padding-top:14vh;z-index:100}
+.cmdk.open{display:flex}
+.cmdk-box{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;
+  width:min(640px,92vw);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+.cmdk input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);
+  padding:18px 22px;font-size:16px;color:var(--text-strong)}
+.cmdk input:focus{outline:none}
+.cmdk-list{max-height:380px;overflow-y:auto;padding:8px 0}
+.cmdk-item{padding:10px 22px;display:flex;align-items:center;gap:12px;cursor:pointer;font-size:13px}
+.cmdk-item:hover,.cmdk-item.sel{background:var(--panel)}
+.cmdk-item .lbl{color:var(--text-strong);font-weight:500}
+.cmdk-item .desc{color:var(--muted);font-size:12px;margin-left:auto}
+.cmdk-item .key{color:var(--accent);font-family:'SF Mono',Menlo,monospace;font-size:11px;
+  background:var(--panel-2);padding:2px 6px;border-radius:4px}
+
+/* Tweaks panel */
+.tweaks{position:fixed;bottom:20px;left:84px;background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;display:flex;gap:8px;align-items:center;z-index:50;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:11.5px}
+.tweaks label{color:var(--muted);margin-right:4px}
+.tweaks select,.tweaks input[type=range]{background:var(--bg-elev);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);padding:4px 8px;font-size:11.5px}
+.tweaks .close{color:var(--muted);margin-left:6px;cursor:pointer}
+
+/* Empty / minor */
+.dim{color:var(--muted);font-size:12px}
+.spacer-sm{height:8px}
+
+@media (max-width:1100px){
+  .app{grid-template-columns:64px 1fr}
+  .right-pane{display:none}
+  .studio{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDE RAIL ============ -->
+  <nav class="rail">
+    <div class="rail-logo">M</div>
+    <button class="rail-btn active" data-view="control" title="Control centre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></button>
+    <button class="rail-btn" data-view="board" title="Board (Trello view)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg></button>
+    <button class="rail-btn" data-view="people" title="People / CRM"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a3 3 0 00-3-3"/></svg></button>
+    <button class="rail-btn" data-view="timeline" title="Timeline"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+    <button class="rail-btn" data-view="live" title="Live activity"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></button>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" title="Inbox"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg><span class="badge">3</span></button>
+    <button class="rail-btn" title="Cron health"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+    <div class="rail-avatar" title="Tom">TW</div>
+  </nav>
+
+  <!-- ============ TOPBAR ============ -->
+  <header class="topbar">
+    <h1>Control Centre</h1>
+    <span class="crumb">/ MYO-70 / Head of Development starter pack</span>
+    <div class="search">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="cmd-input" placeholder="Search cards, people, decisions, anything…" />
+      <span class="kbd">⌘K</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="live-pill"><span class="live-dot"></span>Live · 3 active threads</span>
+      <button class="iconbtn" title="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+      <button class="iconbtn" title="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- CONTROL view -->
+    <section class="view active" data-view="control">
+
+      <!-- NORTH STAR -->
+      <div class="ns">
+        <div class="ns-label">North Star · current objective</div>
+        <div class="ns-title">MYO-70 — Head of Development starter pack, anchored on ArtHouse / Sam</div>
+        <div class="ns-progress">
+          <div class="ns-bar"><div class="ns-bar-fill"></div></div>
+          <div class="ns-pct">2 of 6 deliverables done</div>
+        </div>
+        <div class="ns-dod">
+          <div><span class="check">✓</span>Grant pipeline readout</div>
+          <div><span class="check">✓</span>First-conversation script</div>
+          <div><span class="check pending">○</span>Day-one no-CRM ledger template</div>
+          <div><span class="check pending">○</span>Monthly reporting cycle</div>
+          <div><span class="check pending">○</span>After-action retro & learning loop</div>
+          <div><span class="check pending">○</span>Consent & case-study permissions form</div>
+        </div>
+        <div class="ns-meta">
+          <span><b>Owner</b> Henry</span><span><b>Last action</b> 12 min ago · Sam follow-up sent</span><span><b>Live route</b> MYO-75 (Sam)</span>
+        </div>
+      </div>
+
+      <!-- STUDIO -->
+      <div class="sec-head"><h2>Studio · what's happening now</h2><span class="meta">14 cards across 4 lanes · refreshed 30s ago</span></div>
+      <div class="studio">
+        <div class="col" data-tone="triage">
+          <div class="col-head"><span class="title">Triage</span><span class="count">3</span></div>
+          <div class="col-body">
+            <div class="card"><div class="card-id">backlog / sales</div><div class="card-title">Map Jersey housing-charity target list (5 named orgs)</div><div class="card-meta"><span class="who"><span class="avatar-mini">H</span><span class="assignee">Hannah</span></span><span class="age">6h</span></div></div>
+            <div class="card"><div class="card-id">backlog / website</div><div class="card-title">MYO public front-door: hero copy + first proof page</div><div class="card-meta"><span class="who"><span class="avatar-mini">H</span><span class="assignee">Holly</span></span><span class="age">1d</span></div></div>
+            <div class="card"><div class="card-id">named_workstreams / w3</div><div class="card-title">Reference workflow product — Sam thread as exemplar</div><div class="card-meta"><span class="who"><span class="avatar-mini">Hn</span><span class="assignee">Hannah</span></span><span class="age">2d</span></div></div>
+          </div>
+        </div>
+
+        <div class="col" data-tone="ready">
+          <div class="col-head"><span class="title">Ready · needs an owner</span><span class="count">4</span></div>
+          <div class="col-body">
+            <div class="card"><div class="card-id">ready</div><div class="card-title">MYO-82 — Fix diary_morning/evening --dry-run + emit() failure propagation</div><div class="card-meta"><span class="who"><span class="avatar-mini">H</span><span class="assignee">Holly</span></span><span class="age">now</span></div></div>
+            <div class="card"><div class="card-id">ready</div><div class="card-title">MYO-83 — Investigate worker loop not auto-picking Hazel BLOCK fixes</div><div class="card-meta"><span class="who"><span class="avatar-mini">Hn</span><span class="assignee">Henry</span></span><span class="age">10h</span></div></div>
+            <div class="card"><div class="card-id">ready</div><div class="card-title">MYO-85 — Ship 6 unbuilt Henry Operating Principles guardrails</div><div class="card-meta"><span class="who"><span class="avatar-mini">H</span><span class="assignee">Holly</span></span><span class="age">2d</span></div></div>
+            <div class="card"><div class="card-id">ready</div><div class="card-title">MYO-78 — Implement thread-stable reply-to</div><div class="card-meta"><span class="who"><span class="avatar-mini">H</span><span class="assignee">Holly</span></span><span class="age">3d</span></div></div>
+          </div>
+        </div>
+
+        <div class="col" data-tone="progress">
+          <div class="col-head"><span class="title">In progress</span><span class="count">2</span></div>
+          <div class="col-body">
+            <div class="card card-running"><div class="card-id">MYO-75</div><div class="card-title">Real ArtHouse engagement go-live · awaiting Sam reply</div><div class="card-meta"><span class="who"><span class="avatar-mini">Hn</span><span class="assignee">Henry</span></span><span class="age">12m</span></div></div>
+            <div class="card card-running"><div class="card-id">MYO-73</div><div class="card-title">Synthetic Dean-housing route · live/idle with housing@withig.com</div><div class="card-meta"><span class="who"><span class="avatar-mini">Hn</span><span class="assignee">Henry</span></span><span class="age">idle</span></div></div>
+          </div>
+        </div>
+
+        <div class="col" data-tone="blocked">
+          <div class="col-head"><span class="title">Blocked / held</span><span class="count">1</span></div>
+          <div class="col-body">
+            <div class="card card-blocked"><div class="card-id">review / hazel</div><div class="card-title">MYO-81 — diary channel delivery-failure dedupe fix</div><div class="card-meta"><span class="who"><span class="avatar-mini">Hz</span><span class="assignee">Hazel</span></span><span class="age">21h</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE ACTIVITY -->
+      <div class="sec-head"><h2>Live activity stream</h2><span class="meta">auto-tail · last 30 min</span></div>
+      <div class="activity">
+        <div class="activity-head"><h2>What's running right now</h2><span class="live-pill"><span class="live-dot"></span>engagement loop ON</span></div>
+        <div class="activity-body">
+          <div class="act-row"><span class="act-time">22:03</span><span class="act-icon send">→</span><div class="act-text">Henry direct-locked reply sent to <b>tom@witherington.me</b> as Resend id <span class="ref">624b74b8</span> · MYO-75 Sam thread reconciliation</div></div>
+          <div class="act-row"><span class="act-time">21:58</span><span class="act-icon dispatch">⟳</span><div class="act-text">Dispatcher tick · 1 thread skipped (parent card not actionable)</div></div>
+          <div class="act-row"><span class="act-time">21:46</span><span class="act-icon dispatch">⟳</span><div class="act-text">Dispatcher tick · same skip pattern (MYO-83 symptom — under investigation)</div></div>
+          <div class="act-row"><span class="act-time">21:30</span><span class="act-icon dispatch">⟳</span><div class="act-text">Board auto-dispatcher ran · no actionable changes</div></div>
+          <div class="act-row"><span class="act-time">21:18</span><span class="act-icon send">→</span><div class="act-text">Sam follow-up email queued and sent · <span class="ref">MYO-75</span> high-level grant-workflow discovery</div></div>
+          <div class="act-row"><span class="act-time">20:55</span><span class="act-icon done">✓</span><div class="act-text"><b>MYO-84 closed</b> · agent-side proxy allowlist is authoritative end-to-end (live)</div></div>
+          <div class="act-row"><span class="act-time">20:14</span><span class="act-icon block">!</span><div class="act-text">Hazel returned <b>BLOCK WITH REQUIRED FIXES</b> on <span class="ref">MYO-81</span> diary dedupe wrapper</div></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- BOARD view (placeholder; references existing /board route) -->
+    <section class="view" data-view="board">
+      <div class="sec-head"><h2>Full board view</h2><span class="meta">34 sections · 151 cards</span></div>
+      <div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border:1px solid var(--border);border-radius:10px">
+        The existing Trello board lives at <span style="color:var(--accent);font-family:monospace">http://100.95.71.67:18714/</span>.<br><br>
+        The Control Centre <b>embeds</b> the board (not replaces it) — click "Board" in the side rail to switch to the full Kanban surface with all 34 sections, drag-and-drop, and edit modal.
+      </div>
+    </section>
+
+    <!-- PEOPLE view -->
+    <section class="view" data-view="people">
+      <div class="sec-head"><h2>People · CRM-lite</h2><span class="meta">from Obsidian/People · auto-derived</span></div>
+      <div class="people-grid">
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#5cd07e,#4FC3F7)">SM</div><div><div class="person-name">Samantha Mackelden</div><div class="person-tag">ArtHouse Jersey · live route MYO-75</div></div></div><div class="person-stat"><span class="k">Last contact</span><span class="v">12 min ago</span></div><div class="person-stat"><span class="k">Emails exchanged</span><span class="v">3</span></div><div class="person-stat"><span class="k">Open threads</span><span class="v">1</span></div><span class="person-state" data-state="live">Live · awaiting reply</span></div>
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#eb5a46,#f3c969)">DD</div><div><div class="person-name">Dean Darwin</div><div class="person-tag">Synthetic housing persona · MYO-73</div></div></div><div class="person-stat"><span class="k">Last contact</span><span class="v">3 days ago</span></div><div class="person-stat"><span class="k">Emails exchanged</span><span class="v">9</span></div><div class="person-stat"><span class="k">Route</span><span class="v">housing@withig.com</span></div><span class="person-state" data-state="warm">Warm · synthetic</span></div>
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#c97cf3,#eb5a46)">JM</div><div><div class="person-name">James Lawrence</div><div class="person-tag">Jersey housing NGO · real, cold</div></div></div><div class="person-stat"><span class="k">Last contact</span><span class="v">14 days ago</span></div><div class="person-stat"><span class="k">Open threads</span><span class="v">0</span></div><div class="person-stat"><span class="k">Opt-in status</span><span class="v">none</span></div><span class="person-state" data-state="cold">Cold · no opt-in</span></div>
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#f3c969,#eb5a46)">BG</div><div><div class="person-name">Ben Davies</div><div class="person-tag">Foxdocs / tech peer · met at conf</div></div></div><div class="person-stat"><span class="k">Last contact</span><span class="v">2 months ago</span></div><div class="person-stat"><span class="k">Topics</span><span class="v">Resend, auth flows</span></div><span class="person-state" data-state="warm">Warm</span></div>
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#4FC3F7,#5cd07e)">AR</div><div><div class="person-name">Andy Le Gresley</div><div class="person-tag">Jersey Charity · possible pilot</div></div></div><div class="person-stat"><span class="k">Last contact</span><span class="v">6 weeks ago</span></div><div class="person-stat"><span class="k">Notes</span><span class="v">2 linked</span></div><span class="person-state" data-state="warm">Warm · re-engage soon</span></div>
+        <div class="person"><div class="person-head"><div class="person-avatar" style="background:linear-gradient(135deg,#8a96a4,#b6c2cf)">+ 68</div><div><div class="person-name">All contacts</div><div class="person-tag">Browse, search, filter</div></div></div><div class="person-stat"><span class="k">In vault</span><span class="v">73 people</span></div><div class="person-stat"><span class="k">With open threads</span><span class="v">2</span></div><div class="person-stat"><span class="k">Opt-in confirmed</span><span class="v">1</span></div><span class="person-state" data-state="cold">Full CRM view →</span></div>
+      </div>
+    </section>
+
+    <!-- TIMELINE view -->
+    <section class="view" data-view="timeline">
+      <div class="sec-head"><h2>Timeline · last 7 days</h2><span class="meta">card events + email sends + cron ticks</span></div>
+      <div class="timeline">
+        <div class="tl-row" data-tone="live"><span class="tl-when">22:03 today</span><div class="tl-what"><b>Henry direct-locked reply</b> sent to Tom — <span class="ref">MYO-75</span> Sam thread reconciliation</div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">20:55 today</span><div class="tl-what"><b>MYO-84 closed</b> — proxy allowlist is agent-authoritative end-to-end</div></div>
+        <div class="tl-row" data-tone="block"><span class="tl-when">20:14 today</span><div class="tl-what">Hazel returned <b>BLOCK WITH REQUIRED FIXES</b> on <span class="ref">MYO-81</span> diary dedupe wrapper</div></div>
+        <div class="tl-row" data-tone="live"><span class="tl-when">19:30 today</span><div class="tl-what"><b>Sam follow-up email</b> sent — high-level grant-workflow discovery · <span class="ref">MYO-75</span></div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">17:14 today</span><div class="tl-what"><b>MYO-70-D1 closed</b> — grant pipeline readout shipped to Sam</div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">Yesterday</span><div class="tl-what"><b>MYO-80 watchlist poll-decisions</b> cron went live</div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">2 days ago</span><div class="tl-what"><b>housing@withig.com</b> approved as second Tom-owned synthetic route · <span class="ref">MYO-73</span></div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">3 days ago</span><div class="tl-what"><b>Resend intake Worker</b> live (Tom-only synthetic) · <span class="ref">MYO-63</span></div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">5 days ago</span><div class="tl-what"><b>Card-naming convention</b> introduced — 12 domain prefixes · <span class="ref">docs/operations/card-naming-convention.md</span></div></div>
+        <div class="tl-row" data-tone="done"><span class="tl-when">6 days ago</span><div class="tl-what"><b>Henry Operating Principles</b> doc authored · 8 lessons, paired to durable guardrails</div></div>
+      </div>
+    </section>
+
+    <!-- LIVE activity (deeper than the studio strip) -->
+    <section class="view" data-view="live">
+      <div class="sec-head"><h2>Live · deep activity</h2><span class="meta">all sources · auto-refresh 30s</span></div>
+      <div class="activity">
+        <div class="activity-head"><h2>What's happening across the system</h2><span class="live-pill"><span class="live-dot"></span>all healthy</span></div>
+        <div class="activity-body">
+          <div class="act-row"><span class="act-time">22:03:16</span><span class="act-icon send">→</span><div class="act-text">engagement direct_sent · <span class="ref">624b74b8</span> · MYO-75 reconciliation</div></div>
+          <div class="act-row"><span class="act-time">22:00:00</span><span class="act-icon dispatch">⟳</span><div class="act-text">henry diary evening recap ran (silent)</div></div>
+          <div class="act-row"><span class="act-time">21:54:57</span><span class="act-icon dispatch">⟳</span><div class="act-text">engagement dispatcher tick · silent · no notable events</div></div>
+          <div class="act-row"><span class="act-time">21:50:14</span><span class="act-icon done">✓</span><div class="act-text">MYO-80 watchlist poll-decisions cron · healthy tick</div></div>
+          <div class="act-row"><span class="act-time">21:46:54</span><span class="act-icon dispatch">⟳</span><div class="act-text">board auto-dispatcher · skipped_card_not_actionable (MYO-83 pattern)</div></div>
+          <div class="act-row"><span class="act-time">21:42:54</span><span class="act-icon dispatch">⟳</span><div class="act-text">engagement dispatcher tick · silent</div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ RIGHT PANE — needs Tom ============ -->
+  <aside class="right-pane">
+    <div class="pane-h"><h2>Needs Tom</h2><span class="count">2</span></div>
+
+    <div class="need-card" data-tone="wait">
+      <div class="need-label">Awaiting reply · MYO-75</div>
+      <div class="need-from">Samantha Mackelden · ArtHouse Jersey</div>
+      <div class="need-subj">Re: workflow discovery — high-level grant process at ArtHouse</div>
+      <div class="need-body">"Yes, a 30-min call would be useful. I'm generally free Wednesday / Thursday this week. Could you send a Calendly or similar?"</div>
+      <div class="need-actions"><button class="need-btn">View thread</button><button class="need-btn primary">Draft reply</button></div>
+    </div>
+
+    <div class="need-card" data-tone="ask">
+      <div class="need-label">Henry's question</div>
+      <div class="need-from">Architecture delegation returned</div>
+      <div class="need-subj">Control Centre spec — pick a signature feature</div>
+      <div class="need-body">"Of the 8 features I'd build tonight, which signature feature should we go all-in on: (a) Needs-Tom card stream with one-tap answers, (b) live canvas of who's working on what, or (c) integrated People/CRM with obsidian graph?"</div>
+      <div class="need-actions"><button class="need-btn">a</button><button class="need-btn">b</button><button class="need-btn primary">c</button></div>
+    </div>
+
+    <div class="pane-h" style="margin-top:8px"><h2>System</h2></div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--muted)">Cron health</span><span style="color:var(--success);font-weight:600">12 / 12 healthy</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--muted)">Engagement loop</span><span style="color:var(--success);font-weight:600">ON · idle</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--muted)">Mail queue</span><span style="color:var(--text);font-weight:600">66 items · 4m ago dry-run</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(--muted)">Active specialists</span><span style="color:var(--text);font-weight:600">0 running · 3 idle</span></div>
+    </div>
+
+  </aside>
+
+</div>
+
+<!-- ============ Command palette ============ -->
+<div class="cmdk" id="cmdk">
+  <div class="cmdk-box">
+    <input id="cmdk-input" placeholder="Search cards, people, jump to view, run a slash command…" />
+    <div class="cmdk-list" id="cmdk-list"></div>
+  </div>
+</div>
+
+<!-- ============ Tweaks ============ -->
+<div class="tweaks">
+  <label>Concept preview</label>
+  <span class="dim">click anywhere to dismiss</span>
+  <span class="close">×</span>
+</div>
+
+<script>
+// View switching
+const railBtns=document.querySelectorAll('.rail-btn[data-view]');
+const views=document.querySelectorAll('.view');
+railBtns.forEach(b=>b.addEventListener('click',()=>{
+  railBtns.forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  views.forEach(v=>v.classList.toggle('active',v.dataset.view===b.dataset.view));
+}));
+
+// Command palette
+const cmdk=document.getElementById('cmdk');
+const cmdkInput=document.getElementById('cmdk-input');
+const cmdkList=document.getElementById('cmdk-list');
+const items=[
+  {lbl:'Jump to Control Centre',desc:'view',key:'g c'},
+  {lbl:'Jump to Board',desc:'view',key:'g b'},
+  {lbl:'Jump to People',desc:'view',key:'g p'},
+  {lbl:'Jump to Timeline',desc:'view',key:'g t'},
+  {lbl:'Search: MYO-82',desc:'card',key:'/'},
+  {lbl:'Search: Sam',desc:'people',key:'/'},
+  {lbl:'Search: Hazel',desc:'people',key:'/'},
+  {lbl:'Action: dispatch Holly on MYO-82',desc:'action',key:'⏎'},
+  {lbl:'Action: refresh board',desc:'action',key:'⏎'},
+  {lbl:'Action: open needs-Tom pane',desc:'action',key:'⏎'},
+];
+function renderCmdk(filter){
+  cmdkList.innerHTML='';
+  const f=(filter||'').toLowerCase();
+  items.filter(i=>!f||i.lbl.toLowerCase().includes(f)).forEach((i,idx)=>{
+    const el=document.createElement('div');
+    el.className='cmdk-item'+(idx===0?' sel':'');
+    el.innerHTML=`<span class="lbl">${i.lbl}</span><span class="desc">${i.desc}</span><span class="key">${i.key}</span>`;
+    cmdkList.appendChild(el);
+  });
+}
+function openCmdk(){cmdk.classList.add('open');renderCmdk('');setTimeout(()=>cmdkInput.focus(),50)}
+function closeCmdk(){cmdk.classList.remove('open')}
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openCmdk()}
+  if(e.key==='Escape')closeCmdk()
+});
+cmdk.addEventListener('click',e=>{if(e.target===cmdk)closeCmdk()});
+cmdkInput.addEventListener('input',e=>renderCmdk(e.target.value));
+document.getElementById('cmd-input').addEventListener('focus',openCmdk);
+
+// Card click → show as if it were a real card
+document.querySelectorAll('.card').forEach(c=>{
+  c.addEventListener('click',()=>{
+    const id=c.querySelector('.card-id')?.textContent||'';
+    const title=c.querySelector('.card-title')?.textContent||'';
+    const assignee=c.querySelector('.assignee')?.textContent||'';
+    alert(`Open card:\n\n[${id}]\n${title}\n\nAssignee: ${assignee}\n\n(Real implementation: full-screen card view with body, history, events, related cards.)`);
+  });
+});
+
+// Hide tweaks on click
+document.querySelector('.tweaks').addEventListener('click',e=>{
+  e.currentTarget.style.display='none';
+});
+</script>
+</body>
+</html>

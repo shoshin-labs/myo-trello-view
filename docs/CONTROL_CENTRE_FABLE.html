@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Myo Control Centre</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300B8D9'/%3E%3Crect x='6' y='8' width='6' height='18' rx='2' fill='white'/%3E%3Crect x='14' y='8' width='6' height='14' rx='2' fill='white' opacity='.7'/%3E%3Crect x='22' y='8' width='4' height='10' rx='2' fill='white' opacity='.5'/%3E%3C/svg%3E" />
+<style>
+/* ================================================================
+   MYO CONTROL CENTRE — design pass "Fable"
+   Same token family as the live board, tuned for depth + hierarchy.
+   ================================================================ */
+:root{
+  --accent:#00B8D9; --accent-2:#4FC3F7;
+  --accent-ink:#001a22;
+  --success:#5cd07e; --warn:#f3c969; --danger:#eb5a46; --block:#c97cf3;
+
+  --bg:#0b0f14;                    /* one notch deeper than the board */
+  --bg-elev:#12171e;
+  --panel:#171d25;
+  --panel-2:#1f2731;
+  --panel-3:#28313d;
+  --border:#2a333e;
+  --hairline:rgba(148,178,204,.09);
+  --hairline-strong:rgba(148,178,204,.16);
+
+  --text:#b6c2cf; --text-strong:#eaf1f7; --muted:#7f8b99; --faint:#5b6773;
+
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+
+  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset, 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.5);
+  --shadow-float:0 1px 0 rgba(255,255,255,.04) inset, 0 12px 32px -8px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  --shadow-pop:0 1px 0 rgba(255,255,255,.05) inset, 0 40px 90px -20px rgba(0,0,0,.75), 0 8px 28px rgba(0,0,0,.5);
+
+  --mono:'SF Mono','JetBrains Mono',ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.32,.72,.24,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100vh;overflow:hidden;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  font-size:14px;line-height:1.45;color:var(--text);
+  background:
+    radial-gradient(1400px 900px at 88% -12%,rgba(0,184,217,.075),transparent 58%),
+    radial-gradient(1100px 800px at -8% 105%,rgba(79,195,247,.05),transparent 55%),
+    var(--bg);
+  font-feature-settings:'cv11','ss01','ss03';
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+::selection{background:rgba(0,184,217,.28)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#232c36;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#33404d;background-clip:padding-box}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ---------- app frame ---------- */
+.app{display:grid;grid-template-columns:60px minmax(0,1fr) 372px;grid-template-rows:54px minmax(0,1fr);height:100vh}
+
+/* ---------- side rail ---------- */
+.rail{grid-row:1/3;display:flex;flex-direction:column;align-items:center;padding:12px 0 14px;gap:4px;
+  background:rgba(11,15,20,.72);backdrop-filter:saturate(160%) blur(16px);border-right:1px solid var(--hairline);z-index:30}
+.rail-logo{width:34px;height:34px;border-radius:9px;margin-bottom:16px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--accent-ink);
+  font-weight:800;font-size:15px;box-shadow:0 4px 16px rgba(0,184,217,.4),0 1px 0 rgba(255,255,255,.25) inset}
+.rail-btn{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--muted);
+  position:relative;transition:background .15s var(--ease),color .15s var(--ease)}
+.rail-btn:hover{background:var(--panel);color:var(--text-strong)}
+.rail-btn.active{background:linear-gradient(180deg,var(--panel-2),var(--panel));color:var(--accent);
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 2px 6px rgba(0,0,0,.35)}
+.rail-btn.active::before{content:'';position:absolute;left:-10px;top:11px;bottom:11px;width:3px;
+  background:linear-gradient(180deg,var(--accent),var(--accent-2));border-radius:0 3px 3px 0}
+.rail-btn .badge{position:absolute;top:3px;right:3px;background:var(--danger);color:#fff;font-size:9.5px;font-weight:700;
+  padding:1px 4.5px;border-radius:8px;min-width:15px;text-align:center;line-height:1.35;
+  box-shadow:0 0 0 2.5px var(--bg)}
+.rail-tip{position:absolute;left:52px;top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;
+  background:var(--panel-3);color:var(--text-strong);font-size:11.5px;font-weight:500;padding:5px 10px;border-radius:7px;
+  border:1px solid var(--hairline-strong);box-shadow:var(--shadow-float);opacity:0;pointer-events:none;
+  transition:opacity .12s,transform .12s var(--ease);z-index:40}
+.rail-btn:hover .rail-tip{opacity:1;transform:translateY(-50%) translateX(0)}
+.rail-spacer{flex:1}
+.rail-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12.5px;
+  background:linear-gradient(135deg,#eb5a46,#f3c969);color:#1a0e08;cursor:pointer;
+  box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--hairline-strong)}
+
+/* ---------- topbar ---------- */
+.topbar{grid-column:2/4;display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:rgba(15,20,27,.8);backdrop-filter:saturate(170%) blur(16px);border-bottom:1px solid var(--hairline);z-index:20}
+.topbar h1{margin:0;font-size:14px;font-weight:650;color:var(--text-strong);letter-spacing:-.011em;white-space:nowrap}
+.crumb{color:var(--faint);font-size:12.5px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.crumb .sep{color:var(--faint);opacity:.6}
+.crumb .ref{color:var(--muted);font-family:var(--mono);font-size:11.5px}
+.search{flex:1;max-width:460px;position:relative;margin-left:6px}
+.search input{width:100%;background:rgba(18,23,30,.9);border:1px solid var(--hairline-strong);border-radius:9px;
+  padding:7px 62px 7px 34px;color:var(--text-strong);font-size:13px;transition:border-color .15s,box-shadow .15s}
+.search input::placeholder{color:var(--faint)}
+.search input:focus{outline:none;border-color:rgba(0,184,217,.55);box-shadow:0 0 0 3px rgba(0,184,217,.14)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.kbd{background:var(--panel-2);border:1px solid var(--hairline-strong);border-bottom-width:2px;border-radius:5px;
+  padding:1px 6px;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.search .kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%)}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.live-pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 9px;border-radius:99px;
+  font-size:11.5px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:all .2s var(--ease);
+  background:rgba(92,208,126,.1);color:var(--success);border:1px solid rgba(92,208,126,.22)}
+.live-pill.paused{background:rgba(243,201,105,.1);color:var(--warn);border-color:rgba(243,201,105,.25)}
+.live-dot{width:6.5px;height:6.5px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor;animation:pulse 2.2s infinite}
+.live-pill.paused .live-dot{animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.iconbtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--muted);transition:all .15s}
+.iconbtn:hover{background:var(--panel);color:var(--text-strong)}
+
+/* ---------- main scroll area ---------- */
+.main{overflow-y:auto;overflow-x:hidden;padding:22px 28px 64px;scroll-behavior:smooth}
+.view{display:none}
+.view.active{display:block;animation:viewIn .28s var(--ease)}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- shared: section heads, panels, chips ---------- */
+.sec{margin-bottom:28px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin:0 0 12px}
+.sec-head h2{margin:0;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.11em;text-transform:uppercase}
+.sec-head .meta{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums;margin-left:auto}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.014),transparent 40%),var(--panel);
+  border:1px solid var(--hairline-strong);border-radius:var(--r-md);box-shadow:var(--shadow-card)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:650;
+  letter-spacing:.05em;text-transform:uppercase;line-height:1.6}
+.chip.ok{background:rgba(92,208,126,.12);color:var(--success)}
+.chip.warn{background:rgba(243,201,105,.12);color:var(--warn)}
+.chip.bad{background:rgba(235,90,70,.13);color:var(--danger)}
+.chip.info{background:rgba(0,184,217,.12);color:var(--accent)}
+.chip.neutral{background:rgba(127,139,153,.13);color:var(--muted)}
+.chip.purple{background:rgba(201,124,243,.13);color:var(--block)}
+
+/* ================================================================
+   NORTH STAR hero
+   ================================================================ */
+.ns{position:relative;overflow:hidden;border-radius:var(--r-lg);margin-bottom:22px;
+  background:
+    radial-gradient(600px 280px at 12% -30%,rgba(0,184,217,.14),transparent 65%),
+    radial-gradient(500px 300px at 95% 130%,rgba(79,195,247,.08),transparent 60%),
+    linear-gradient(180deg,rgba(255,255,255,.02),transparent 50%),
+    var(--panel);
+  border:1px solid rgba(0,184,217,.28);
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 20px 60px -24px rgba(0,184,217,.3),0 8px 28px rgba(0,0,0,.45);
+  display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:8px;padding:22px 26px 20px}
+.ns::before{content:'';position:absolute;inset:0 0 auto 0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,184,217,.5) 30%,rgba(79,195,247,.4) 60%,transparent)}
+.ns-label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:750;
+  display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ns-label .star{filter:drop-shadow(0 0 6px rgba(0,184,217,.6))}
+.ns-title{font-size:21px;font-weight:700;color:var(--text-strong);letter-spacing:-.018em;line-height:1.28;margin:0 0 16px;max-width:640px}
+.ns-title .id{color:var(--accent);font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:0;
+  vertical-align:2px;margin-right:10px;background:rgba(0,184,217,.1);padding:2px 8px;border-radius:6px}
+.ns-dod{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-width:720px}
+.dod{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:9px;font-size:12px;
+  background:rgba(18,23,30,.55);border:1px solid var(--hairline);color:var(--text);transition:all .15s}
+.dod .tick{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-size:9.5px;font-weight:800}
+.dod.done{border-color:rgba(92,208,126,.25)}
+.dod.done .tick{background:rgba(92,208,126,.18);color:var(--success)}
+.dod.done span{color:var(--text)}
+.dod.open .tick{border:1.5px solid var(--faint);color:transparent}
+.dod.open span{color:var(--muted)}
+.dod.live{border-color:rgba(0,184,217,.35);background:rgba(0,184,217,.06)}
+.dod.live .tick{background:rgba(0,184,217,.2);color:var(--accent);animation:pulse 2s infinite}
+.dod.live span{color:var(--text-strong)}
+.ns-meta{display:flex;gap:20px;margin-top:16px;font-size:11.5px;color:var(--faint)}
+.ns-meta b{display:block;color:var(--text);font-weight:550;font-size:12px;margin-top:1px}
+.ns-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  border-left:1px solid var(--hairline);padding-left:16px}
+.ring-wrap{position:relative;width:128px;height:128px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-num .big{font-size:30px;font-weight:750;color:var(--text-strong);letter-spacing:-.02em;line-height:1}
+.ring-num .of{font-size:10.5px;color:var(--muted);margin-top:4px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.ring-cap{font-size:11px;color:var(--faint)}
+
+/* ================================================================
+   Stat tiles row
+   ================================================================ */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:26px}
+.stat{padding:14px 16px 13px;cursor:default;position:relative;transition:border-color .15s}
+.stat.clickable{cursor:pointer}
+.stat.clickable:hover{border-color:rgba(0,184,217,.4)}
+.stat-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.stat-value{font-size:26px;font-weight:700;color:var(--text-strong);letter-spacing:-.02em;line-height:1.05;display:flex;align-items:baseline;gap:8px}
+.stat-value small{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0}
+.stat-sub{font-size:11.5px;color:var(--faint);margin-top:6px;display:flex;align-items:center;gap:6px}
+.stat-sub .up{color:var(--success)} .stat-sub .down{color:var(--danger)} .stat-sub .flat{color:var(--warn)}
+.stat .spark{position:absolute;right:14px;bottom:12px}
+.statusdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.statusdot.ok{background:var(--success);box-shadow:0 0 7px rgba(92,208,126,.7)}
+
+/* ================================================================
+   Studio — 4 lanes
+   ================================================================ */
+.studio{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.lane{display:flex;flex-direction:column;min-height:190px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(255,255,255,.012),transparent 30%),var(--panel);
+  border:1px solid var(--hairline-strong);box-shadow:var(--shadow-card);overflow:hidden}
+.lane-head{padding:10px 13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--hairline)}
+.lane-head .dot{width:7px;height:7px;border-radius:2.5px}
+.lane-head .title{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text)}
+.lane-head .count{margin-left:auto;font-size:10.5px;color:var(--muted);background:var(--panel-2);
+  padding:1px 7px;border-radius:8px;font-weight:650;font-variant-numeric:tabular-nums}
+.lane[data-tone="triage"] .dot{background:var(--warn)}
+.lane[data-tone="ready"] .dot{background:var(--accent-2)}
+.lane[data-tone="progress"] .dot{background:var(--accent);box-shadow:0 0 7px rgba(0,184,217,.7)}
+.lane[data-tone="blocked"] .dot{background:var(--danger)}
+.lane-body{padding:8px;display:flex;flex-direction:column;gap:7px;flex:1}
+
+.card{background:linear-gradient(180deg,rgba(255,255,255,.018),transparent 55%),var(--panel-2);
+  border:1px solid var(--hairline);border-radius:10px;padding:10px 12px 9px;cursor:pointer;position:relative;
+  transition:transform .16s var(--ease),border-color .16s,box-shadow .16s}
+.card:hover{transform:translateY(-1.5px);border-color:rgba(0,184,217,.45);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -10px rgba(0,0,0,.6)}
+.card-id{font-size:10px;color:var(--faint);font-family:var(--mono);letter-spacing:.05em;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.card-title{font-size:12.5px;font-weight:530;color:var(--text-strong);line-height:1.38;margin-bottom:8px}
+.card-meta{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--muted)}
+.avatar-xs{width:17px;height:17px;border-radius:50%;display:inline-grid;place-items:center;
+  font-size:8.5px;font-weight:750;color:var(--accent-ink);flex-shrink:0}
+.card-meta .age{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--faint)}
+.card .pulse-dot{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%}
+.card.running .pulse-dot{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.6s infinite}
+.card.blocked .pulse-dot{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+
+/* ================================================================
+   Specialists — mood / status strip
+   ================================================================ */
+.crew{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.mate{padding:14px 15px 12px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s;cursor:pointer}
+.mate:hover{border-color:rgba(0,184,217,.35)}
+.mate-top{display:flex;align-items:center;gap:11px}
+.mate-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:750;font-size:13px;
+  color:var(--accent-ink);position:relative;flex-shrink:0}
+.mate-avatar::after{content:'';position:absolute;inset:-3.5px;border-radius:50%;border:2px solid transparent}
+.mate[data-state="working"] .mate-avatar::after{border-color:rgba(0,184,217,.75);animation:ringPulse 2s infinite}
+.mate[data-state="reviewing"] .mate-avatar::after{border-color:rgba(243,201,105,.7)}
+.mate[data-state="watching"] .mate-avatar::after{border-color:rgba(92,208,126,.55)}
+.mate[data-state="idle"] .mate-avatar::after{border-color:var(--hairline-strong)}
+@keyframes ringPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.mate-name{font-size:13.5px;font-weight:650;color:var(--text-strong);letter-spacing:-.01em}
+.mate-role{font-size:10.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.mate-state{margin-left:auto;align-self:flex-start}
+.mate-now{font-size:12px;color:var(--text);background:rgba(18,23,30,.6);border:1px solid var(--hairline);
+  border-radius:8px;padding:7px 10px;line-height:1.45}
+.mate-now .ref{color:var(--accent);font-family:var(--mono);font-size:11px}
+.mate-now .eta{color:var(--faint);font-size:11px;display:block;margin-top:3px}
+.mate-log{display:flex;flex-direction:column;gap:4px}
+.mate-log .l{font-size:11px;color:var(--muted);display:flex;gap:7px;align-items:baseline;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mate-log .t{color:var(--faint);font-family:var(--mono);font-size:9.5px;flex-shrink:0;width:34px;font-variant-numeric:tabular-nums}
+
+/* ================================================================
+   Interruption heatmap  (sequential — one hue, dark→bright cyan)
+   ================================================================ */
+.split-2{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:12px}
+.hm-card{padding:16px 18px 15px}
+.hm-title{font-size:12.5px;font-weight:650;color:var(--text-strong);margin-bottom:2px}
+.hm-sub{font-size:11px;color:var(--faint);margin-bottom:14px}
+.hm-grid{display:grid;grid-template-columns:34px repeat(12,minmax(0,1fr));gap:3px;align-items:center}
+.hm-dow{font-size:10px;color:var(--faint);font-weight:600;text-align:right;padding-right:6px;letter-spacing:.04em}
+.hm-cell{aspect-ratio:1.35/1;border-radius:4px;background:var(--panel-2);cursor:default;position:relative;
+  transition:transform .1s,box-shadow .1s}
+.hm-cell:hover{transform:scale(1.12);box-shadow:0 0 0 1.5px rgba(234,241,247,.35);z-index:2}
+.hm-hours{display:grid;grid-template-columns:34px repeat(12,minmax(0,1fr));gap:3px;margin-top:5px}
+.hm-hours span{font-size:9px;color:var(--faint);text-align:center;font-family:var(--mono)}
+.hm-foot{display:flex;align-items:center;gap:10px;margin-top:13px;font-size:10.5px;color:var(--faint)}
+.hm-scale{display:flex;gap:2.5px;align-items:center}
+.hm-scale i{width:14px;height:9px;border-radius:2.5px;display:block}
+.hm-peak{margin-left:auto;color:var(--muted)}
+.hm-peak b{color:var(--accent);font-weight:650}
+
+/* shared floating tooltip (heatmap + sparklines) */
+.viz-tip{position:fixed;pointer-events:none;background:var(--panel-3);border:1px solid var(--hairline-strong);
+  border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--text-strong);box-shadow:var(--shadow-float);
+  z-index:200;opacity:0;transition:opacity .1s;white-space:nowrap}
+.viz-tip .k{color:var(--muted);font-size:10.5px;display:block;margin-bottom:1px}
+
+/* ================================================================
+   Trust ledger
+   ================================================================ */
+.ledger{overflow:hidden}
+.ledger-head{padding:14px 18px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hairline)}
+.ledger-head .hm-title{margin:0}
+.ledger-head .hm-sub{margin:0}
+.ledger table{width:100%;border-collapse:collapse;font-size:12px}
+.ledger th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+  padding:9px 14px;border-bottom:1px solid var(--hairline);background:rgba(18,23,30,.4)}
+.ledger td{padding:10px 14px;border-bottom:1px solid var(--hairline);vertical-align:middle}
+.ledger tr:last-child td{border-bottom:none}
+.ledger tbody tr{transition:background .12s}
+.ledger tbody tr:hover{background:rgba(0,184,217,.035)}
+.ledger .t{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ledger .route{font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap}
+.ledger .to{color:var(--text-strong);font-weight:530}
+.ledger .subj{color:var(--muted);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gates{display:flex;gap:4px}
+.gate{width:26px;height:19px;border-radius:5px;display:grid;place-items:center;font-size:8.5px;font-weight:750;
+  letter-spacing:.03em;font-family:var(--mono);cursor:default}
+.gate.pass{background:rgba(92,208,126,.13);color:var(--success)}
+.gate.na{background:rgba(127,139,153,.1);color:var(--faint)}
+.gate.fail{background:rgba(235,90,70,.15);color:var(--danger)}
+.verify-btn{font-size:11px;font-weight:600;padding:4px 11px;border-radius:7px;border:1px solid var(--hairline-strong);
+  background:var(--panel-2);color:var(--text);transition:all .15s;white-space:nowrap}
+.verify-btn:hover{border-color:var(--accent);color:var(--accent)}
+.verify-btn.checking{color:var(--accent);border-color:rgba(0,184,217,.4);pointer-events:none}
+.verify-btn.verified{background:rgba(92,208,126,.12);border-color:rgba(92,208,126,.3);color:var(--success);pointer-events:none}
+
+/* ================================================================
+   Right pane — Needs Tom + interrupt budget + routes + system
+   ================================================================ */
+.right{grid-column:3;background:rgba(15,20,27,.55);backdrop-filter:saturate(150%) blur(16px);
+  border-left:1px solid var(--hairline);overflow-y:auto;padding:18px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.pane-h{display:flex;align-items:center;gap:8px}
+.pane-h h2{margin:0;font-size:10.5px;font-weight:750;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.pane-h .n{font-size:10.5px;font-weight:750;padding:1px 7px;border-radius:8px;font-variant-numeric:tabular-nums}
+.pane-h .n.hot{color:var(--danger);background:rgba(235,90,70,.14)}
+.pane-h .hint{margin-left:auto;font-size:10.5px;color:var(--faint)}
+
+/* interrupt budget */
+.budget{padding:14px 16px 13px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;align-items:center}
+.budget-ring{position:relative;width:86px;height:86px;grid-row:1/3}
+.budget-ring svg{transform:rotate(-90deg)}
+.budget-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.budget-num .v{font-size:21px;font-weight:750;color:var(--text-strong);line-height:1;letter-spacing:-.02em}
+.budget-num .c{font-size:9.5px;color:var(--faint);margin-top:3px;font-weight:600;letter-spacing:.05em}
+.budget-line{font-size:12px;color:var(--text)}
+.budget-line b{color:var(--text-strong);font-weight:650}
+.budget-sub{font-size:11px;color:var(--faint);line-height:1.5}
+.budget-cap{grid-column:1/3;display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:11px;border-top:1px solid var(--hairline);
+  font-size:11px;color:var(--muted)}
+.cap-btn{width:22px;height:22px;border-radius:6px;background:var(--panel-2);border:1px solid var(--hairline-strong);
+  color:var(--text);font-weight:700;font-size:12px;display:grid;place-items:center;transition:all .12s}
+.cap-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cap-val{font-variant-numeric:tabular-nums;font-weight:650;color:var(--text-strong);min-width:16px;text-align:center}
+.budget-cap .note{margin-left:auto;color:var(--faint);font-size:10.5px}
+
+/* needs-Tom cards */
+.need{padding:13px 14px 12px;position:relative;border-radius:var(--r-md);cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 45%),var(--panel);
+  border:1px solid var(--hairline-strong);box-shadow:var(--shadow-card);
+  transition:border-color .15s,transform .35s var(--ease),opacity .35s}
+.need::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0}
+.need[data-tone="wait"]::before{background:var(--warn)}
+.need[data-tone="ask"]::before{background:var(--block)}
+.need[data-tone="block"]::before{background:var(--danger)}
+.need:hover{border-color:rgba(0,184,217,.4)}
+.need.resolved{opacity:0;transform:translateX(40px);pointer-events:none}
+.need-label{font-size:9.5px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;margin-bottom:7px;display:flex;gap:8px;align-items:center}
+.need[data-tone="wait"] .need-label{color:var(--warn)}
+.need[data-tone="ask"] .need-label{color:var(--block)}
+.need[data-tone="block"] .need-label{color:var(--danger)}
+.need-label .when{margin-left:auto;color:var(--faint);font-weight:500;letter-spacing:0;text-transform:none;font-size:10px}
+.need-from{font-size:12px;color:var(--text-strong);font-weight:640;margin-bottom:2px}
+.need-subj{font-size:12px;color:var(--text);margin-bottom:9px;line-height:1.4}
+.need-quote{font-size:11.5px;color:var(--muted);line-height:1.55;padding:8px 11px;margin-bottom:10px;
+  background:rgba(11,15,20,.55);border:1px solid var(--hairline);border-radius:8px;
+  border-left:2px solid var(--hairline-strong)}
+.need-actions{display:flex;gap:6px}
+.nbtn{flex:1;padding:6px 8px;font-size:11.5px;border-radius:7px;font-weight:550;text-align:center;
+  border:1px solid var(--hairline-strong);background:var(--panel-2);color:var(--text);transition:all .13s}
+.nbtn:hover{border-color:var(--accent);color:var(--accent)}
+.nbtn.primary{background:linear-gradient(180deg,#08c3e4,var(--accent));color:var(--accent-ink);
+  border-color:transparent;font-weight:650;box-shadow:0 2px 10px rgba(0,184,217,.35),0 1px 0 rgba(255,255,255,.25) inset}
+.nbtn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+
+/* routes trust panel */
+.routes{display:flex;flex-direction:column}
+.route-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--hairline);font-size:12px}
+.route-row:last-child{border-bottom:none}
+.route-icon{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex-shrink:0;font-size:12px}
+.route-row[data-trust="real"] .route-icon{background:rgba(92,208,126,.12);color:var(--success)}
+.route-row[data-trust="synthetic"] .route-icon{background:rgba(0,184,217,.12);color:var(--accent)}
+.route-row[data-trust="pending"] .route-icon{background:rgba(243,201,105,.12);color:var(--warn)}
+.route-name{font-family:var(--mono);font-size:11px;color:var(--text-strong)}
+.route-sub{font-size:10.5px;color:var(--faint)}
+.route-row .chip{margin-left:auto}
+
+/* system panel */
+.sys{padding:4px 0}
+.sys-row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:11.5px;border-bottom:1px solid var(--hairline)}
+.sys-row:last-child{border-bottom:none}
+.sys-row .k{color:var(--muted)}
+.sys-row .v{color:var(--text);font-weight:550;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
+.sys-row .v.ok{color:var(--success)}
+
+/* ================================================================
+   People view
+   ================================================================ */
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px}
+.person{padding:14px 15px;cursor:pointer;transition:border-color .15s,transform .16s var(--ease)}
+.person:hover{border-color:rgba(0,184,217,.4);transform:translateY(-1.5px)}
+.person-head{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.person-avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:750;font-size:13.5px;color:var(--accent-ink);flex-shrink:0}
+.person-name{font-size:13.5px;font-weight:650;color:var(--text-strong);letter-spacing:-.01em}
+.person-tag{font-size:11px;color:var(--faint)}
+.person-stat{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--hairline);font-size:11.5px}
+.person-stat .k{color:var(--muted)} .person-stat .v{color:var(--text);font-weight:530;font-variant-numeric:tabular-nums}
+.person-foot{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* ================================================================
+   Timeline view
+   ================================================================ */
+.tl-day{font-size:10.5px;font-weight:750;color:var(--muted);letter-spacing:.11em;text-transform:uppercase;
+  margin:22px 0 10px;display:flex;align-items:center;gap:12px}
+.tl-day::after{content:'';flex:1;height:1px;background:var(--hairline)}
+.tl-day:first-child{margin-top:0}
+.timeline{position:relative;padding-left:26px}
+.timeline::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;
+  background:linear-gradient(180deg,var(--hairline-strong),var(--hairline))}
+.tl-row{position:relative;padding:7px 0;display:grid;grid-template-columns:74px minmax(0,1fr);gap:16px;align-items:baseline}
+.tl-row::before{content:'';position:absolute;left:-22.5px;top:13px;width:9px;height:9px;border-radius:50%;
+  background:var(--bg-elev);border:2px solid var(--border)}
+.tl-row[data-tone="done"]::before{background:var(--success);border-color:var(--success)}
+.tl-row[data-tone="live"]::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 9px var(--accent)}
+.tl-row[data-tone="block"]::before{background:var(--danger);border-color:var(--danger)}
+.tl-row[data-tone="send"]::before{background:var(--accent-2);border-color:var(--accent-2)}
+.tl-when{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;font-family:var(--mono)}
+.tl-what{font-size:12.5px;color:var(--text);line-height:1.5}
+.tl-what b{color:var(--text-strong);font-weight:640}
+.ref{color:var(--accent);font-family:var(--mono);font-size:11.5px}
+
+/* ================================================================
+   Live view + activity stream
+   ================================================================ */
+.filters{display:flex;gap:6px;margin-bottom:12px}
+.fbtn{font-size:11.5px;font-weight:550;padding:5px 13px;border-radius:99px;border:1px solid var(--hairline-strong);
+  color:var(--muted);background:transparent;transition:all .13s}
+.fbtn:hover{color:var(--text-strong);border-color:var(--border)}
+.fbtn.active{background:rgba(0,184,217,.12);color:var(--accent);border-color:rgba(0,184,217,.35)}
+.stream{overflow:hidden}
+.act-row{padding:9px 18px;display:flex;align-items:flex-start;gap:11px;font-size:12.5px;border-bottom:1px solid var(--hairline)}
+.act-row:last-child{border-bottom:none}
+.act-row.hidden{display:none}
+.act-time{color:var(--faint);font-variant-numeric:tabular-nums;flex-shrink:0;font-size:11px;margin-top:2px;font-family:var(--mono);width:56px}
+.act-icon{width:22px;height:22px;border-radius:6.5px;display:grid;place-items:center;flex-shrink:0;font-size:11px;font-weight:750}
+.act-icon.send{background:rgba(0,184,217,.14);color:var(--accent)}
+.act-icon.cron{background:rgba(79,195,247,.12);color:var(--accent-2)}
+.act-icon.done{background:rgba(92,208,126,.13);color:var(--success)}
+.act-icon.block{background:rgba(235,90,70,.14);color:var(--danger)}
+.act-text{flex:1;line-height:1.5}
+.act-text b{color:var(--text-strong);font-weight:640}
+.act-row.new{animation:actIn .5s var(--ease)}
+@keyframes actIn{from{opacity:0;transform:translateY(-8px);background:rgba(0,184,217,.08)}to{opacity:1;transform:none}}
+
+/* board embed placeholder */
+.board-frame{padding:0;overflow:hidden}
+.bf-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--hairline);font-size:11.5px;color:var(--muted)}
+.bf-bar .url{font-family:var(--mono);font-size:11px;color:var(--text);background:var(--panel-2);border:1px solid var(--hairline);
+  border-radius:6px;padding:3px 10px;flex:1;max-width:360px}
+.bf-body{display:flex;gap:10px;padding:16px;overflow-x:auto;background:rgba(11,15,20,.5)}
+.bf-col{min-width:180px;background:var(--panel-2);border:1px solid var(--hairline);border-radius:9px;padding:9px}
+.bf-col h4{margin:0 0 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bf-card{height:34px;border-radius:6px;background:var(--panel-3);border:1px solid var(--hairline);margin-bottom:6px;opacity:.75}
+.bf-card.short{height:24px}
+.bf-note{padding:14px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--hairline);line-height:1.6}
+
+/* ================================================================
+   Card detail drawer
+   ================================================================ */
+.scrim{position:fixed;inset:0;background:rgba(4,7,10,.55);backdrop-filter:blur(3px);z-index:80;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,92vw);z-index:90;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 30%),var(--bg-elev);
+  border-left:1px solid var(--hairline-strong);box-shadow:var(--shadow-pop);
+  transform:translateX(103%);transition:transform .32s var(--ease);display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer-head{padding:18px 24px 16px;border-bottom:1px solid var(--hairline);flex-shrink:0}
+.drawer-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.drawer-id{font-family:var(--mono);font-size:12px;color:var(--accent);background:rgba(0,184,217,.1);padding:3px 9px;border-radius:6px;font-weight:600}
+.drawer-close{margin-left:auto;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);transition:all .13s}
+.drawer-close:hover{background:var(--panel-2);color:var(--text-strong)}
+.drawer-title{margin:0;font-size:18px;font-weight:700;color:var(--text-strong);letter-spacing:-.015em;line-height:1.3}
+.drawer-meta{display:flex;gap:18px;margin-top:12px;font-size:11px;color:var(--faint);flex-wrap:wrap}
+.drawer-meta b{display:block;color:var(--text);font-weight:550;font-size:12px;margin-top:1px}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 24px 48px}
+.d-sec{margin-bottom:24px}
+.d-sec h3{margin:0 0 10px;font-size:10.5px;font-weight:750;color:var(--muted);letter-spacing:.11em;text-transform:uppercase}
+.d-prose{font-size:13px;color:var(--text);line-height:1.65;background:var(--panel);border:1px solid var(--hairline);
+  border-radius:10px;padding:14px 17px}
+.d-prose p{margin:0 0 10px} .d-prose p:last-child{margin:0}
+.d-prose code{font-family:var(--mono);font-size:11.5px;background:var(--panel-2);padding:1px 6px;border-radius:4px;color:var(--accent-2)}
+.d-gates{display:flex;gap:8px;flex-wrap:wrap}
+.d-gate{display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;font-size:12px;
+  background:var(--panel);border:1px solid var(--hairline)}
+.d-gate .s{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0}
+.d-gate.pass .s{background:rgba(92,208,126,.16);color:var(--success)}
+.d-gate.open .s{border:1.5px solid var(--faint)}
+.d-gate.pass{border-color:rgba(92,208,126,.2)}
+.d-hist .act-row{padding:8px 0}
+
+/* side-by-side compare */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-pane{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.cmp-head{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid var(--hairline);
+  font-size:11px;font-weight:650;color:var(--text-strong)}
+.cmp-head .avatar-xs{width:18px;height:18px;font-size:9px}
+.cmp-head .rev{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.cmp-body{padding:11px 13px;font-size:12px;line-height:1.6;color:var(--text)}
+.cmp-body p{margin:0 0 8px} .cmp-body p:last-child{margin:0}
+.mark-flag{background:rgba(235,90,70,.14);border-bottom:1px dashed rgba(235,90,70,.55);border-radius:2px;padding:0 2px;color:#f3a99e}
+.mark-ok{background:rgba(92,208,126,.1);border-radius:2px;padding:0 2px}
+.cmp-note{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;margin-bottom:7px;
+  background:rgba(235,90,70,.06);border:1px solid rgba(235,90,70,.18);font-size:11.5px;line-height:1.5}
+.cmp-note.minor{background:rgba(243,201,105,.06);border-color:rgba(243,201,105,.2)}
+.cmp-note .n{font-family:var(--mono);font-size:10px;color:var(--danger);font-weight:700;flex-shrink:0;margin-top:1px}
+.cmp-note.minor .n{color:var(--warn)}
+
+/* ================================================================
+   Command palette
+   ================================================================ */
+.cmdk{position:fixed;inset:0;background:rgba(4,7,10,.6);backdrop-filter:blur(6px);z-index:120;
+  display:flex;align-items:flex-start;justify-content:center;padding-top:13vh;
+  opacity:0;pointer-events:none;transition:opacity .16s}
+.cmdk.open{opacity:1;pointer-events:auto}
+.cmdk-box{width:min(620px,92vw);background:var(--bg-elev);border:1px solid var(--hairline-strong);border-radius:14px;
+  box-shadow:var(--shadow-pop);overflow:hidden;transform:scale(.97) translateY(-6px);transition:transform .18s var(--ease)}
+.cmdk.open .cmdk-box{transform:none}
+.cmdk-inputwrap{display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--hairline)}
+.cmdk-inputwrap svg{color:var(--faint);flex-shrink:0}
+.cmdk input{flex:1;background:transparent;border:none;padding:17px 0;font-size:15.5px;color:var(--text-strong)}
+.cmdk input::placeholder{color:var(--faint)}
+.cmdk input:focus{outline:none}
+.cmdk-list{max-height:380px;overflow-y:auto;padding:7px}
+.cmdk-group{font-size:10px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);padding:9px 13px 5px}
+.cmdk-item{padding:9px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;font-size:13px;border-radius:9px}
+.cmdk-item.sel{background:rgba(0,184,217,.1)}
+.cmdk-item .ic{width:26px;height:26px;border-radius:7px;background:var(--panel-2);border:1px solid var(--hairline);
+  display:grid;place-items:center;color:var(--muted);font-size:12px;flex-shrink:0}
+.cmdk-item.sel .ic{color:var(--accent);border-color:rgba(0,184,217,.35)}
+.cmdk-item .lbl{color:var(--text-strong);font-weight:530}
+.cmdk-item .lbl .slash{color:var(--accent);font-family:var(--mono);font-size:12px}
+.cmdk-item .desc{color:var(--faint);font-size:11.5px;margin-left:auto;padding-left:14px;white-space:nowrap}
+.cmdk-empty{padding:26px;text-align:center;color:var(--faint);font-size:12.5px}
+.cmdk-foot{display:flex;gap:14px;padding:9px 18px;border-top:1px solid var(--hairline);font-size:10.5px;color:var(--faint);align-items:center}
+.cmdk-foot .kbd{margin-right:2px}
+
+/* ================================================================
+   Toasts
+   ================================================================ */
+.toasts{position:fixed;bottom:20px;right:392px;display:flex;flex-direction:column;gap:8px;z-index:150;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 13px;border-radius:11px;font-size:12.5px;
+  background:var(--panel-3);border:1px solid var(--hairline-strong);color:var(--text-strong);
+  box-shadow:var(--shadow-float);animation:toastIn .3s var(--ease);max-width:380px}
+.toast.out{animation:toastOut .3s var(--ease) forwards}
+.toast .ti{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:10.5px;font-weight:800;flex-shrink:0}
+.toast.ok .ti{background:rgba(92,208,126,.16);color:var(--success)}
+.toast.info .ti{background:rgba(0,184,217,.16);color:var(--accent)}
+.toast.warn .ti{background:rgba(243,201,105,.16);color:var(--warn)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(8px) scale(.97)}}
+
+/* responsive */
+@media (max-width:1240px){
+  .app{grid-template-columns:60px minmax(0,1fr)}
+  .right{display:none}
+  .toasts{right:20px}
+}
+@media (max-width:980px){
+  .studio,.crew,.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .split-2{grid-template-columns:1fr}
+  .ns{grid-template-columns:1fr}
+  .ns-ring{border-left:none;padding-left:0;flex-direction:row;justify-content:flex-start}
+  .ns-dod{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════════ SIDE RAIL ══════════════ -->
+<nav class="rail">
+  <div class="rail-logo">M</div>
+  <button class="rail-btn active" data-view="control" aria-label="Control centre">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    <span class="rail-tip">Control centre</span>
+  </button>
+  <button class="rail-btn" data-view="board" aria-label="Board">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg>
+    <span class="rail-tip">Board · Trello view</span>
+  </button>
+  <button class="rail-btn" data-view="people" aria-label="People">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a3 3 0 00-3-3"/></svg>
+    <span class="rail-tip">People · CRM</span>
+  </button>
+  <button class="rail-btn" data-view="timeline" aria-label="Timeline">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span class="rail-tip">Timeline</span>
+  </button>
+  <button class="rail-btn" data-view="live" aria-label="Live activity">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    <span class="rail-tip">Live activity</span>
+  </button>
+  <div class="rail-spacer"></div>
+  <button class="rail-btn" id="rail-inbox" aria-label="Needs Tom">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+    <span class="badge" id="inbox-badge">3</span>
+    <span class="rail-tip">Needs Tom · 3 pending</span>
+  </button>
+  <div class="rail-avatar" title="Tom Witherington">TW</div>
+</nav>
+
+<!-- ══════════════ TOPBAR ══════════════ -->
+<header class="topbar">
+  <h1 id="view-title">Control Centre</h1>
+  <span class="crumb"><span class="sep">/</span><span class="ref">MYO-70</span><span>Head of Development starter pack</span></span>
+  <div class="search">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input id="topbar-search" placeholder="Search or type a command…" readonly />
+    <span class="kbd">⌘K</span>
+  </div>
+  <div class="topbar-right">
+    <button class="live-pill" id="loop-pill" title="Click to pause / resume the engagement loop">
+      <span class="live-dot"></span><span id="loop-label">Engagement loop · live</span>
+    </button>
+    <button class="iconbtn" title="Refresh" id="btn-refresh">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+    </button>
+    <button class="iconbtn" title="Notifications">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="main">
+
+<!-- ────────── CONTROL ────────── -->
+<section class="view active" data-view="control">
+
+  <!-- North Star -->
+  <div class="ns">
+    <div>
+      <div class="ns-label"><span class="star">✦</span>North Star · current objective</div>
+      <h2 class="ns-title"><span class="id">MYO-70</span>Head of Development starter pack, anchored on ArtHouse&nbsp;/&nbsp;Sam</h2>
+      <div class="ns-dod">
+        <div class="dod done"><span class="tick">✓</span><span>Grant pipeline readout</span></div>
+        <div class="dod done"><span class="tick">✓</span><span>First-conversation script</span></div>
+        <div class="dod live"><span class="tick">●</span><span>Day-one no-CRM ledger template</span></div>
+        <div class="dod open"><span class="tick">✓</span><span>Monthly reporting cycle</span></div>
+        <div class="dod open"><span class="tick">✓</span><span>After-action retro &amp; learning loop</span></div>
+        <div class="dod open"><span class="tick">✓</span><span>Consent &amp; case-study permissions</span></div>
+      </div>
+      <div class="ns-meta">
+        <span>Owner<b>Henry</b></span>
+        <span>Last action<b>12 min ago · Sam follow-up sent</b></span>
+        <span>Live route<b>MYO-75 · Sam / ArtHouse</b></span>
+        <span>Target<b>Fri 10 Jul</b></span>
+      </div>
+    </div>
+    <div class="ns-ring">
+      <div class="ring-wrap">
+        <svg width="128" height="128" viewBox="0 0 128 128">
+          <circle cx="64" cy="64" r="55" fill="none" stroke="rgba(0,184,217,.14)" stroke-width="9"/>
+          <circle cx="64" cy="64" r="55" fill="none" stroke="url(#nsGrad)" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="345.6" stroke-dashoffset="230.4" id="ns-ring-fill"/>
+          <defs><linearGradient id="nsGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#00B8D9"/><stop offset="1" stop-color="#4FC3F7"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="ring-num"><span class="big">2<span style="color:var(--faint);font-weight:500">/6</span></span><span class="of">deliverables</span></div>
+      </div>
+      <span class="ring-cap">1 in flight · on pace for Friday</span>
+    </div>
+  </div>
+
+  <!-- Stat tiles -->
+  <div class="stats">
+    <div class="stat panel clickable" id="stat-needs" title="Open the Needs-Tom queue">
+      <div class="stat-label">Needs Tom</div>
+      <div class="stat-value"><span id="stat-needs-n">3</span><small>pending</small></div>
+      <div class="stat-sub"><span class="flat">▲ 2 arrived today</span>· oldest 4h</div>
+    </div>
+    <div class="stat panel">
+      <div class="stat-label">Outbound today</div>
+      <div class="stat-value">4<small>emails</small></div>
+      <div class="stat-sub"><span class="up">✓ all gates passed</span>· 0 held</div>
+    </div>
+    <div class="stat panel">
+      <div class="stat-label">Cron health</div>
+      <div class="stat-value">12<small>of 12</small></div>
+      <div class="stat-sub"><span class="statusdot ok"></span><span class="up">healthy</span>· last tick 42s ago</div>
+    </div>
+    <div class="stat panel">
+      <div class="stat-label">Thread activity</div>
+      <div class="stat-value">3<small>live threads</small></div>
+      <div class="stat-sub">last 12 h</div>
+      <svg class="spark" width="96" height="30" id="spark-threads" aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <!-- Studio -->
+  <div class="sec">
+    <div class="sec-head"><h2>Studio · what's happening now</h2><span class="meta">10 cards across 4 lanes · refreshed 30 s ago</span></div>
+    <div class="studio">
+      <div class="lane" data-tone="triage">
+        <div class="lane-head"><span class="dot"></span><span class="title">Triage</span><span class="count">3</span></div>
+        <div class="lane-body" data-lane="triage"></div>
+      </div>
+      <div class="lane" data-tone="ready">
+        <div class="lane-head"><span class="dot"></span><span class="title">Ready</span><span class="count">4</span></div>
+        <div class="lane-body" data-lane="ready"></div>
+      </div>
+      <div class="lane" data-tone="progress">
+        <div class="lane-head"><span class="dot"></span><span class="title">In progress</span><span class="count">2</span></div>
+        <div class="lane-body" data-lane="progress"></div>
+      </div>
+      <div class="lane" data-tone="blocked">
+        <div class="lane-head"><span class="dot"></span><span class="title">Blocked / held</span><span class="count">1</span></div>
+        <div class="lane-body" data-lane="blocked"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specialists -->
+  <div class="sec">
+    <div class="sec-head"><h2>Specialists · who's doing what</h2><span class="meta">live from worker loop · 1 working · 1 reviewing · 1 watching · 1 idle</span></div>
+    <div class="crew" id="crew"></div>
+  </div>
+
+  <!-- Heatmap + Trust ledger -->
+  <div class="sec">
+    <div class="sec-head"><h2>Signals</h2><span class="meta">interrupt patterns &amp; outbound trust</span></div>
+    <div class="split-2">
+      <div class="panel hm-card">
+        <div class="hm-title">When Tom gets interrupted</div>
+        <div class="hm-sub">decision requests routed to you, by 2-hour block · last 6 weeks</div>
+        <div class="hm-grid" id="hm-grid"></div>
+        <div class="hm-hours" id="hm-hours"></div>
+        <div class="hm-foot">
+          <span>fewer</span>
+          <span class="hm-scale" id="hm-scale"></span>
+          <span>more</span>
+          <span class="hm-peak">Peak: <b>Thu 14–16</b> · 9 asks — worth batching evening dispatches</span>
+        </div>
+      </div>
+      <div class="panel ledger">
+        <div class="ledger-head">
+          <div>
+            <div class="hm-title">Trust ledger</div>
+            <div class="hm-sub">every outbound email · gates: <span style="font-family:var(--mono)">ALW</span> allowlist · <span style="font-family:var(--mono)">CNS</span> consent · <span style="font-family:var(--mono)">DRY</span> dry-run · <span style="font-family:var(--mono)">HZL</span> Hazel review</div>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Sent</th><th>To</th><th>Gates</th><th></th></tr></thead>
+          <tbody id="ledger-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live activity strip -->
+  <div class="sec">
+    <div class="sec-head"><h2>Live activity</h2><span class="meta">auto-tail · last 30 min</span></div>
+    <div class="panel stream" id="control-stream"></div>
+  </div>
+
+</section>
+
+<!-- ────────── BOARD ────────── -->
+<section class="view" data-view="board">
+  <div class="sec-head"><h2>Full board · Trello view</h2><span class="meta">34 sections · 151 cards · drag-and-drop lives here</span></div>
+  <div class="panel board-frame">
+    <div class="bf-bar">
+      <span style="display:flex;gap:5px"><i style="width:9px;height:9px;border-radius:50%;background:#3a4653;display:block"></i><i style="width:9px;height:9px;border-radius:50%;background:#3a4653;display:block"></i><i style="width:9px;height:9px;border-radius:50%;background:#3a4653;display:block"></i></span>
+      <span class="url">http://100.95.71.67:18714/ — Myo board · Studio</span>
+      <span class="chip info">embedded</span>
+    </div>
+    <div class="bf-body">
+      <div class="bf-col"><h4>Backlog / sales</h4><div class="bf-card"></div><div class="bf-card short"></div><div class="bf-card"></div></div>
+      <div class="bf-col"><h4>Ready</h4><div class="bf-card short"></div><div class="bf-card"></div><div class="bf-card short"></div><div class="bf-card"></div></div>
+      <div class="bf-col"><h4>In progress</h4><div class="bf-card"></div><div class="bf-card short"></div></div>
+      <div class="bf-col"><h4>Review / Hazel</h4><div class="bf-card"></div></div>
+      <div class="bf-col"><h4>Done · this week</h4><div class="bf-card short"></div><div class="bf-card short"></div><div class="bf-card"></div></div>
+      <div class="bf-col"><h4>Named workstreams</h4><div class="bf-card"></div><div class="bf-card"></div></div>
+    </div>
+    <div class="bf-note">
+      The Control Centre <b style="color:var(--text-strong)">embeds</b> the existing Trello board rather than replacing it — in the real build this pane is an
+      <span class="ref">&lt;iframe&gt;</span> (or shared component) of the full Kanban surface with all 34 sections, drag-and-drop and the edit modal.
+      The Studio lanes on the Control tab are a curated slice of the same <span class="ref">board.db</span>.
+    </div>
+  </div>
+</section>
+
+<!-- ────────── PEOPLE ────────── -->
+<section class="view" data-view="people">
+  <div class="sec-head"><h2>People · CRM-lite</h2><span class="meta">derived from Obsidian/People · 73 contacts · 2 with open threads</span></div>
+  <div class="people-grid" id="people-grid"></div>
+</section>
+
+<!-- ────────── TIMELINE ────────── -->
+<section class="view" data-view="timeline">
+  <div class="sec-head"><h2>Timeline · last 7 days</h2><span class="meta">card events · email sends · cron milestones</span></div>
+  <div id="timeline-host"></div>
+</section>
+
+<!-- ────────── LIVE ────────── -->
+<section class="view" data-view="live">
+  <div class="sec-head"><h2>Live · deep activity</h2><span class="meta">all sources · auto-refresh 30 s</span></div>
+  <div class="filters" id="live-filters">
+    <button class="fbtn active" data-f="all">All</button>
+    <button class="fbtn" data-f="send">Sends</button>
+    <button class="fbtn" data-f="cron">Cron ticks</button>
+    <button class="fbtn" data-f="done">Completions</button>
+    <button class="fbtn" data-f="block">Blocks</button>
+  </div>
+  <div class="panel stream" id="live-stream"></div>
+</section>
+
+</main>
+
+<!-- ══════════════ RIGHT PANE ══════════════ -->
+<aside class="right">
+
+  <!-- Interrupt budget -->
+  <div>
+    <div class="pane-h" style="margin-bottom:10px"><h2>Interrupt budget</h2><span class="hint">today</span></div>
+    <div class="panel budget">
+      <div class="budget-ring">
+        <svg width="86" height="86" viewBox="0 0 86 86">
+          <circle cx="43" cy="43" r="36" fill="none" stroke="rgba(0,184,217,.13)" stroke-width="7.5" id="budget-track"/>
+          <circle cx="43" cy="43" r="36" fill="none" stroke="var(--accent)" stroke-width="7.5" stroke-linecap="round"
+                  stroke-dasharray="226.2" stroke-dashoffset="226.2" id="budget-fill" style="transition:stroke-dashoffset .5s var(--ease),stroke .3s"/>
+        </svg>
+        <div class="budget-num"><span class="v" id="budget-v">3</span><span class="c">OF <span id="budget-cap-lbl">5</span></span></div>
+      </div>
+      <div class="budget-line"><b id="budget-word">Comfortable.</b> <span id="budget-desc">3 decisions pending, 2 arrived today.</span></div>
+      <div class="budget-sub">Above cap, Henry batches non-urgent asks into the evening diary instead of pinging you.</div>
+      <div class="budget-cap">
+        <span>Daily cap</span>
+        <button class="cap-btn" id="cap-minus" aria-label="Lower cap">−</button>
+        <span class="cap-val" id="cap-val">5</span>
+        <button class="cap-btn" id="cap-plus" aria-label="Raise cap">+</button>
+        <span class="note">also settable via <span style="font-family:var(--mono)">/cap N</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Needs Tom -->
+  <div>
+    <div class="pane-h" style="margin-bottom:10px"><h2>Needs Tom</h2><span class="n hot" id="needs-count">3</span><span class="hint">one-tap answers</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px" id="needs-host">
+
+      <div class="need" data-tone="wait" data-need="sam">
+        <div class="need-label">Awaiting reply · MYO-75<span class="when">12 m</span></div>
+        <div class="need-from">Samantha Mackelden · ArtHouse Jersey</div>
+        <div class="need-subj">Re: workflow discovery — high-level grant process</div>
+        <div class="need-quote">"Yes, a 30-min call would be useful. I'm generally free Wednesday / Thursday this week. Could you send a Calendly or similar?"</div>
+        <div class="need-actions">
+          <button class="nbtn" data-act="thread">View thread</button>
+          <button class="nbtn primary" data-act="draft">Draft reply</button>
+        </div>
+      </div>
+
+      <div class="need" data-tone="ask" data-need="henry">
+        <div class="need-label">Henry's question<span class="when">2 h</span></div>
+        <div class="need-from">Architecture delegation returned</div>
+        <div class="need-subj">Control Centre spec — pick a signature feature</div>
+        <div class="need-quote">"Which signature feature should we go all-in on: (a) Needs-Tom stream with one-tap answers, (b) live canvas of who's working on what, or (c) integrated People/CRM with the Obsidian graph?"</div>
+        <div class="need-actions">
+          <button class="nbtn" data-answer="a">a</button>
+          <button class="nbtn" data-answer="b">b</button>
+          <button class="nbtn primary" data-answer="c">c · CRM</button>
+        </div>
+      </div>
+
+      <div class="need" data-tone="block" data-need="hazel">
+        <div class="need-label">Hazel escalation · MYO-81<span class="when">4 h</span></div>
+        <div class="need-from">Review blocked twice — needs a ruling</div>
+        <div class="need-subj">Dedupe window: 24 h (Holly) vs. per-channel (Hazel)?</div>
+        <div class="need-actions">
+          <button class="nbtn" data-act="compare">Compare drafts</button>
+          <button class="nbtn" data-answer="holly">24 h</button>
+          <button class="nbtn primary" data-answer="hazel">Per-channel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Routes / trust states -->
+  <div>
+    <div class="pane-h" style="margin-bottom:10px"><h2>Routes · trust state</h2><span class="hint">3 active</span></div>
+    <div class="panel routes">
+      <div class="route-row" data-trust="real">
+        <span class="route-icon">✓</span>
+        <div><div class="route-name">s.mackelden@arthouse.je</div><div class="route-sub">MYO-75 · opt-in on file · 3 emails</div></div>
+        <span class="chip ok">Real · consented</span>
+      </div>
+      <div class="route-row" data-trust="synthetic">
+        <span class="route-icon">◈</span>
+        <div><div class="route-name">housing@withig.com</div><div class="route-sub">MYO-73 · Dean persona · Tom-owned</div></div>
+        <span class="chip info">Synthetic</span>
+      </div>
+      <div class="route-row" data-trust="pending">
+        <span class="route-icon">◔</span>
+        <div><div class="route-name">j.lawrence@jerseyhomes.org</div><div class="route-sub">target list · no outbound until opt-in</div></div>
+        <span class="chip warn">Consent pending</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- System -->
+  <div>
+    <div class="pane-h" style="margin-bottom:10px"><h2>System</h2></div>
+    <div class="panel sys">
+      <div class="sys-row"><span class="k">Cron health</span><span class="v ok"><span class="statusdot ok"></span>12 / 12 healthy</span></div>
+      <div class="sys-row"><span class="k">Engagement loop</span><span class="v ok" id="sys-loop">ON · idle</span></div>
+      <div class="sys-row"><span class="k">Mail queue</span><span class="v">66 items · dry-run 4 m ago</span></div>
+      <div class="sys-row"><span class="k">Specialists</span><span class="v">1 running · 3 standing by</span></div>
+      <div class="sys-row"><span class="k">board.db</span><span class="v">synced · 30 s</span></div>
+    </div>
+  </div>
+
+</aside>
+</div><!-- /app -->
+
+<!-- ══════════════ CARD DRAWER ══════════════ -->
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true">
+  <div class="drawer-head">
+    <div class="drawer-top">
+      <span class="drawer-id" id="d-id">MYO-00</span>
+      <span id="d-state"></span>
+      <button class="drawer-close" id="drawer-close" aria-label="Close">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <h2 class="drawer-title" id="d-title"></h2>
+    <div class="drawer-meta" id="d-meta"></div>
+  </div>
+  <div class="drawer-body" id="d-body"></div>
+</div>
+
+<!-- ══════════════ COMMAND PALETTE ══════════════ -->
+<div class="cmdk" id="cmdk">
+  <div class="cmdk-box">
+    <div class="cmdk-inputwrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="cmdk-input" placeholder="Search cards, people, views — or type / for commands…" autocomplete="off" />
+    </div>
+    <div class="cmdk-list" id="cmdk-list"></div>
+    <div class="cmdk-foot">
+      <span><span class="kbd">↑↓</span> navigate</span>
+      <span><span class="kbd">⏎</span> run</span>
+      <span><span class="kbd">esc</span> close</span>
+      <span style="margin-left:auto"><span class="kbd">/</span> slash commands</span>
+    </div>
+  </div>
+</div>
+
+<!-- shared tooltip + toasts -->
+<div class="viz-tip" id="viz-tip"></div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ================================================================
+   DATA
+   ================================================================ */
+const PEOPLE_COLORS = {
+  Hannah:'linear-gradient(135deg,#f3c969,#eb8f46)',
+  Holly:'linear-gradient(135deg,#4FC3F7,#00B8D9)',
+  Hazel:'linear-gradient(135deg,#c97cf3,#8e6cf3)',
+  Henry:'linear-gradient(135deg,#5cd07e,#2fa4a0)'
+};
+const initials = n => n.slice(0,2);
+
+const CARDS = {
+  'MYO-90':{lane:'triage',id:'backlog / sales',title:'Map Jersey housing-charity target list (5 named orgs)',who:'Hannah',age:'6h',
+    body:`<p>Build a shortlist of five Jersey housing charities with a named contact, evidence of grant activity, and a one-line "why us" angle each. Output feeds the consent-first outreach sequence — <b>no outbound</b> until each contact has an opt-in path.</p><p>Sources: Jersey Charity Commission register, annual reports, LinkedIn. Cross-link each org to <code>Obsidian/People</code>.</p>`,
+    gates:[['Consent-first outreach rule',true],['Named contact per org',false],['Cross-linked to vault',false]],
+    hist:[['6h ago','Hannah','pulled Charity Commission register extract'],['1d ago','Henry','card created from W3 workstream']]},
+  'MYO-88':{lane:'triage',id:'backlog / website',title:'MYO public front-door: hero copy + first proof page',who:'Holly',age:'1d',
+    body:`<p>Single-page front door: what Myo does for small charities, one proof artefact (the Sam grant-pipeline readout, anonymised with consent), and a plain contact route. No CMS — static page in the existing repo.</p>`,
+    gates:[['Sam consent for proof page',false],['Copy reviewed by Hazel',false]],
+    hist:[['1d ago','Henry','triaged from ideas list']]},
+  'W3-REF':{lane:'triage',id:'named_workstreams / w3',title:'Reference workflow product — Sam thread as exemplar',who:'Hannah',age:'2d',
+    body:`<p>Package the full Sam/ArtHouse thread — discovery → readout → follow-up — as the reference "how an engagement runs" artefact. Becomes the template for every future route.</p>`,
+    gates:[['Thread complete through call',false],['Sam case-study consent',false]],
+    hist:[['2d ago','Henry','workstream W3 opened']]},
+  'MYO-82':{lane:'ready',id:'ready',title:'Fix diary_morning/evening --dry-run + emit() failure propagation',who:'Holly',age:'now',
+    body:`<p>Two defects in the diary crons: <code>--dry-run</code> still writes to the outbox table, and <code>emit()</code> swallows transport failures so a dead channel looks healthy for days.</p><p>Fix: honour dry-run before any write; propagate emit failures to the cron exit code so watchdog catches them.</p>`,
+    gates:[['Repro test for both defects',true],['Watchdog picks up failure',false],['Hazel review',false]],
+    hist:[['just now','Henry','marked ready · suggested Holly'],['9h ago','Tom','reported evening diary silently dropping']]},
+  'MYO-83':{lane:'ready',id:'ready',title:'Investigate worker loop not auto-picking Hazel BLOCK fixes',who:'Henry',age:'10h',
+    body:`<p>When Hazel returns <b>BLOCK WITH REQUIRED FIXES</b>, the card re-enters <code>ready</code> but the dispatcher skips it — "parent card not actionable". Suspect the block flag isn't cleared on re-entry. Two skips observed tonight (21:46, 21:58).</p>`,
+    gates:[['Reproduce skip in logs',true],['Root cause identified',false]],
+    hist:[['10h ago','Henry','pattern spotted in dispatcher ticks']]},
+  'MYO-85':{lane:'ready',id:'ready',title:'Ship 6 unbuilt Henry Operating Principles guardrails',who:'Holly',age:'2d',
+    body:`<p>Six lessons from the Operating Principles doc still have no durable enforcement: send-window checks, per-route rate caps, reply-thread locking, consent-flag verification, dry-run parity, and diary dedupe. Each becomes a pre-send gate in the pipeline.</p>`,
+    gates:[['Spec per guardrail agreed',true],['Gates wired into pre-send',false],['Hazel review',false]],
+    hist:[['2d ago','Henry','split from Operating Principles doc']]},
+  'MYO-78':{lane:'ready',id:'ready',title:'Implement thread-stable reply-to',who:'Holly',age:'3d',
+    body:`<p>Replies from specialists currently mint a fresh Message-ID chain, so long threads shatter in the recipient's client. Persist <code>In-Reply-To</code>/<code>References</code> per route and reuse them.</p>`,
+    gates:[['Header persistence in DB',false],['Verified in Gmail + Outlook',false]],
+    hist:[['3d ago','Tom','noticed Sam thread split in Gmail']]},
+  'MYO-75':{lane:'progress',id:'MYO-75',title:'Real ArtHouse engagement go-live · awaiting Sam reply',who:'Henry',age:'12m',running:true,
+    body:`<p>First fully real route. Sam has agreed a 30-min discovery call (Wed/Thu). Next action is <b>Tom's</b>: send the scheduling link, then Henry resumes the sequence — call prep brief, readout v2, follow-up cadence.</p><p>Every send on this route passes all four gates; consent recorded 24 Jun.</p>`,
+    gates:[['Allowlist',true],['Consent on file',true],['Dry-run parity',true],['Hazel review',true]],
+    hist:[['12m ago','Henry','follow-up sent · Resend 624b74b8'],['3h ago','Sam','replied — offered Wed/Thu for a call'],['1d ago','Henry','grant-pipeline readout delivered']]},
+  'MYO-73':{lane:'progress',id:'MYO-73',title:'Synthetic Dean-housing route · live/idle with housing@withig.com',who:'Henry',age:'idle',running:true,
+    body:`<p>Second Tom-owned synthetic route. Exercises the full engagement loop — intake worker, dispatcher, diary — against the Dean persona without touching a real recipient. Currently idle awaiting the next scripted beat.</p>`,
+    gates:[['Allowlist',true],['Synthetic flag',true],['Dry-run parity',true]],
+    hist:[['3d ago','Henry','route approved as second synthetic'],['3d ago','Holly','Resend intake worker wired']]},
+  'MYO-81':{lane:'blocked',id:'review / hazel',title:'Diary channel delivery-failure dedupe fix',who:'Hazel',age:'21h',blocked:true,compare:true,
+    body:`<p>When a diary channel fails delivery, the retry path re-emits the same entry — Tom got the same evening recap four times on 28 Jun. Holly's fix adds a dedupe wrapper; Hazel has blocked it twice, arguing the window must be <b>per-channel</b>, not global.</p><p><b>Needs your ruling</b> — see the comparison below, then answer in the Needs-Tom queue.</p>`,
+    gates:[['Repro test',true],['Hazel review',false],['Tom ruling on window',false]],
+    hist:[['4h ago','Hazel','escalated to Tom — second block'],['20h ago','Hazel','BLOCK WITH REQUIRED FIXES (2 required, 1 minor)'],['1d ago','Holly','submitted dedupe wrapper rev 3']]}
+};
+
+const CREW = [
+  {name:'Holly',role:'Build',state:'working',stateChip:['info','Working'],
+   now:`Implementing <span class="ref">MYO-82</span> — dry-run + emit() fix<span class="eta">ETA ~40 min · then picks up MYO-78</span>`,
+   log:[['22:01','opened branch fix/diary-dryrun'],['21:44','reproduced emit() swallow in test'],['20:30','closed MYO-84 proxy allowlist']]},
+  {name:'Hazel',role:'Review',state:'reviewing',stateChip:['warn','Reviewing'],
+   now:`Re-review queued for <span class="ref">MYO-81</span> rev 4<span class="eta">Waiting on Tom's dedupe-window ruling</span>`,
+   log:[['20:14','BLOCK WITH REQUIRED FIXES on MYO-81'],['19:20','approved MYO-84 for close'],['17:05','reviewed guardrail specs (MYO-85)']]},
+  {name:'Henry',role:'Orchestrator',state:'watching',stateChip:['ok','Watching'],
+   now:`Watching <span class="ref">MYO-75</span> inbox for Sam's reply<span class="eta">Continuous · next dispatcher tick 22:12</span>`,
+   log:[['22:03','direct-locked reply to Tom'],['21:18','Sam follow-up queued + sent'],['20:55','closed MYO-84']]},
+  {name:'Hannah',role:'Research',state:'idle',stateChip:['neutral','Idle'],
+   now:`Standing by<span class="eta">Next scheduled tick 08:00 · target-list mapping</span>`,
+   log:[['16:40','updated 3 people-vault entries'],['14:12','drafted W3 exemplar outline'],['09:05','pulled Charity Commission extract']]},
+];
+
+const LEDGER = [
+  {t:'22:03',route:'engagement@myo',trust:'synthetic',to:'tom@witherington.me',subj:'MYO-75 Sam thread reconciliation',gates:{ALW:1,CNS:2,DRY:1,HZL:1},state:'unverified'},
+  {t:'21:18',route:'engagement@myo',trust:'real',to:'s.mackelden@arthouse.je',subj:'Follow-up — grant workflow discovery call',gates:{ALW:1,CNS:1,DRY:1,HZL:1},state:'verified'},
+  {t:'19:02',route:'housing@withig.com',trust:'synthetic',to:'dean.darwin (persona)',subj:'Housing route nurture beat 7',gates:{ALW:1,CNS:2,DRY:1,HZL:1},state:'verified'},
+  {t:'17:14',route:'engagement@myo',trust:'real',to:'s.mackelden@arthouse.je',subj:'Grant pipeline readout (deliverable 1)',gates:{ALW:1,CNS:1,DRY:1,HZL:1},state:'verified'},
+];
+
+const ACTIVITY = [
+  {t:'22:03:16',k:'send',html:`Henry direct-locked reply sent to <b>tom@witherington.me</b> · Resend <span class="ref">624b74b8</span> · MYO-75 reconciliation`},
+  {t:'22:00:00',k:'cron',html:`henry diary evening recap ran (silent)`},
+  {t:'21:58:41',k:'cron',html:`Dispatcher tick · 1 thread skipped — parent card not actionable (<span class="ref">MYO-83</span> symptom)`},
+  {t:'21:50:14',k:'done',html:`<span class="ref">MYO-80</span> watchlist poll-decisions cron · healthy tick`},
+  {t:'21:46:54',k:'cron',html:`Board auto-dispatcher · skipped_card_not_actionable (same <span class="ref">MYO-83</span> pattern)`},
+  {t:'21:18:09',k:'send',html:`Sam follow-up queued and sent · <span class="ref">MYO-75</span> grant-workflow discovery`},
+  {t:'20:55:30',k:'done',html:`<b>MYO-84 closed</b> · agent-side proxy allowlist authoritative end-to-end (live)`},
+  {t:'20:14:02',k:'block',html:`Hazel returned <b>BLOCK WITH REQUIRED FIXES</b> on <span class="ref">MYO-81</span> diary dedupe wrapper`},
+  {t:'19:30:00',k:'cron',html:`engagement dispatcher tick · silent`},
+  {t:'19:02:47',k:'send',html:`Dean-route nurture beat sent via <b>housing@withig.com</b> · <span class="ref">MYO-73</span>`},
+  {t:'17:14:22',k:'done',html:`<b>MYO-70-D1 closed</b> · grant pipeline readout shipped to Sam`},
+];
+
+const TIMELINE = [
+  {day:'Today · Wed 1 Jul',rows:[
+    ['22:03','live',`<b>Henry direct-locked reply</b> sent to Tom — <span class="ref">MYO-75</span> Sam thread reconciliation`],
+    ['20:55','done',`<b>MYO-84 closed</b> — proxy allowlist is agent-authoritative end-to-end`],
+    ['20:14','block',`Hazel returned <b>BLOCK WITH REQUIRED FIXES</b> on <span class="ref">MYO-81</span> — escalated to Tom after second block`],
+    ['19:30','send',`<b>Sam follow-up</b> sent — high-level grant-workflow discovery · <span class="ref">MYO-75</span>`],
+    ['17:14','done',`<b>MYO-70 deliverable 1 closed</b> — grant pipeline readout shipped to Sam`]]},
+  {day:'Yesterday · Tue 30 Jun',rows:[
+    ['18:20','done',`<b>MYO-80 watchlist poll-decisions</b> cron went live — 12/12 healthy since`],
+    ['11:05','send',`Dean-route beat 6 · <span class="ref">MYO-73</span> synthetic exercise`]]},
+  {day:'Earlier this week',rows:[
+    ['Mon','done',`<b>housing@withig.com</b> approved as second Tom-owned synthetic route · <span class="ref">MYO-73</span>`],
+    ['Sun','done',`<b>Resend intake Worker</b> live (Tom-only synthetic) · <span class="ref">MYO-63</span>`],
+    ['Fri','done',`<b>Card-naming convention</b> introduced — 12 domain prefixes · <span class="ref">docs/operations</span>`],
+    ['Thu','done',`<b>Henry Operating Principles</b> authored — 8 lessons, paired to durable guardrails · 6 still to build (<span class="ref">MYO-85</span>)`]]},
+];
+
+const PEOPLE = [
+  {n:'Samantha Mackelden',tag:'ArtHouse Jersey · live route MYO-75',grad:'linear-gradient(135deg,#5cd07e,#4FC3F7)',
+   stats:[['Last contact','12 min ago'],['Emails exchanged','3'],['Open threads','1']],chips:[['ok','Real · consented'],['info','Live · awaiting reply']]},
+  {n:'Dean Darwin',tag:'Synthetic housing persona · MYO-73',grad:'linear-gradient(135deg,#eb5a46,#f3c969)',
+   stats:[['Last contact','3 h ago'],['Emails exchanged','9'],['Route','housing@withig.com']],chips:[['info','Synthetic'],['neutral','Idle beat']]},
+  {n:'James Lawrence',tag:'Jersey housing NGO · target list',grad:'linear-gradient(135deg,#c97cf3,#eb5a46)',
+   stats:[['Last contact','14 days ago'],['Open threads','0'],['Opt-in status','none']],chips:[['warn','Consent pending']]},
+  {n:'Ben Davies',tag:'Foxdocs / tech peer · met at conf',grad:'linear-gradient(135deg,#f3c969,#eb5a46)',
+   stats:[['Last contact','2 months ago'],['Topics','Resend, auth flows'],['Open threads','0']],chips:[['neutral','Warm']]},
+  {n:'Andy Le Gresley',tag:'Jersey Charity · possible pilot',grad:'linear-gradient(135deg,#4FC3F7,#5cd07e)',
+   stats:[['Last contact','6 weeks ago'],['Notes linked','2'],['Open threads','0']],chips:[['neutral','Warm · re-engage']]},
+  {n:'All contacts',tag:'browse, search, filter the vault',grad:'linear-gradient(135deg,#7f8b99,#b6c2cf)',avatar:'73',
+   stats:[['In vault','73 people'],['With open threads','2'],['Opt-in confirmed','1']],chips:[['info','Full CRM view →']]},
+];
+
+/* interruption heatmap: 7 days × 12 two-hour blocks, asks per block over 6 wks */
+const HM = [
+  [0,0,0,1,3,2,4,2,1,2,1,0],  // Mon
+  [0,0,1,2,2,3,5,3,2,1,0,0],  // Tue
+  [0,0,0,1,4,2,3,2,3,2,1,0],  // Wed
+  [0,0,1,2,3,4,7,9,4,2,1,0],  // Thu
+  [0,0,0,2,2,3,4,3,1,1,0,0],  // Fri
+  [0,0,0,0,1,1,2,1,1,0,0,0],  // Sat
+  [0,0,0,0,0,1,1,2,3,2,1,0],  // Sun
+];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+/* sequential ramp — one hue (cyan), dark→bright on the dark surface */
+const HM_STEPS = ['#1f2731','rgba(0,184,217,.16)','rgba(0,184,217,.32)','rgba(0,184,217,.52)','rgba(0,184,217,.74)','#22cfee'];
+const hmStep = v => v===0?0 : v<=1?1 : v<=2?2 : v<=4?3 : v<=6?4 : 5;
+
+/* ================================================================
+   RENDER — studio lanes
+   ================================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+for(const [key,c] of Object.entries(CARDS)){
+  const el = document.createElement('div');
+  el.className = 'card'+(c.running?' running':'')+(c.blocked?' blocked':'');
+  el.dataset.card = key;
+  el.innerHTML = `
+    ${(c.running||c.blocked)?'<span class="pulse-dot"></span>':''}
+    <div class="card-id">${c.id}</div>
+    <div class="card-title">${key.startsWith('MYO')?key+' — ':''}${c.title}</div>
+    <div class="card-meta">
+      <span class="avatar-xs" style="background:${PEOPLE_COLORS[c.who]}">${initials(c.who)}</span>
+      <span>${c.who}</span><span class="age">${c.age}</span>
+    </div>`;
+  el.addEventListener('click',()=>openCard(key));
+  document.querySelector(`[data-lane="${c.lane}"]`)?.appendChild(el);
+}
+
+/* ================================================================
+   RENDER — specialists
+   ================================================================ */
+$('#crew').innerHTML = CREW.map(m=>`
+  <div class="mate panel" data-state="${m.state}">
+    <div class="mate-top">
+      <div class="mate-avatar" style="background:${PEOPLE_COLORS[m.name]}">${initials(m.name)}</div>
+      <div><div class="mate-name">${m.name}</div><div class="mate-role">${m.role}</div></div>
+      <span class="mate-state chip ${m.stateChip[0]}">${m.stateChip[1]}</span>
+    </div>
+    <div class="mate-now">${m.now}</div>
+    <div class="mate-log">${m.log.map(l=>`<div class="l"><span class="t">${l[0]}</span><span>${l[1]}</span></div>`).join('')}</div>
+  </div>`).join('');
+
+/* ================================================================
+   RENDER — heatmap
+   ================================================================ */
+{
+  const grid = $('#hm-grid'); const tip = $('#viz-tip');
+  HM.forEach((row,d)=>{
+    const lab = document.createElement('div');
+    lab.className='hm-dow'; lab.textContent = DOW[d]; grid.appendChild(lab);
+    row.forEach((v,h)=>{
+      const cell = document.createElement('div');
+      cell.className='hm-cell';
+      cell.style.background = HM_STEPS[hmStep(v)];
+      cell.addEventListener('mousemove',e=>{
+        tip.innerHTML = `<span class="k">${DOW[d]} ${String(h*2).padStart(2,'0')}:00–${String(h*2+2).padStart(2,'0')}:00</span>${v} decision ask${v===1?'':'s'}`;
+        tip.style.opacity = 1;
+        tip.style.left = Math.min(e.clientX+14, innerWidth-180)+'px';
+        tip.style.top = (e.clientY-14)+'px';
+      });
+      cell.addEventListener('mouseleave',()=>tip.style.opacity=0);
+      grid.appendChild(cell);
+    });
+  });
+  const hours = $('#hm-hours');
+  hours.appendChild(document.createElement('span'));
+  for(let h=0;h<12;h++){const s=document.createElement('span');s.textContent = h%2===0?String(h*2).padStart(2,'0'):'';hours.appendChild(s)}
+  $('#hm-scale').innerHTML = HM_STEPS.map(c=>`<i style="background:${c}"></i>`).join('');
+}
+
+/* ================================================================
+   RENDER — sparkline (single series, 2px line, ringed end-dot)
+   ================================================================ */
+{
+  const pts = [1,1,2,1,3,2,2,4,3,5,4,6];
+  const svg = $('#spark-threads'); const W=96,H=30,P=3;
+  const max = Math.max(...pts);
+  const xy = pts.map((v,i)=>[P+i*(W-2*P)/(pts.length-1), H-P-(v/max)*(H-2*P)]);
+  const path = xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const [ex,ey] = xy[xy.length-1];
+  svg.innerHTML = `
+    <path d="${path}" fill="none" stroke="rgba(0,184,217,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${ex}" cy="${ey}" r="5.5" fill="var(--panel)"/>
+    <circle cx="${ex}" cy="${ey}" r="3.5" fill="var(--accent)"/>`;
+}
+
+/* ================================================================
+   RENDER — trust ledger
+   ================================================================ */
+const GATE_TITLES = {ALW:'Allowlist gate',CNS:'Consent gate',DRY:'Dry-run parity',HZL:'Hazel review'};
+$('#ledger-body').innerHTML = LEDGER.map((r,i)=>`
+  <tr>
+    <td><span class="t">${r.t}</span></td>
+    <td>
+      <div class="to">${r.to}</div>
+      <div class="subj" title="${r.subj}">${r.subj}</div>
+      <div class="route">${r.route} · <span class="chip ${r.trust==='real'?'ok':'info'}" style="text-transform:none;letter-spacing:0">${r.trust}</span></div>
+    </td>
+    <td><div class="gates">${Object.entries(r.gates).map(([g,s])=>
+      `<span class="gate ${s===1?'pass':s===2?'na':'fail'}" title="${GATE_TITLES[g]} — ${s===1?'passed':s===2?'n/a (synthetic)':'failed'}">${g}</span>`).join('')}</div></td>
+    <td><button class="verify-btn ${r.state==='verified'?'verified':''}" data-ledger="${i}">${r.state==='verified'?'✓ Verified':'Verify send'}</button></td>
+  </tr>`).join('');
+
+$$('.verify-btn:not(.verified)').forEach(b=>b.addEventListener('click',()=>{
+  b.classList.add('checking'); b.textContent = 'Checking…';
+  setTimeout(()=>{
+    b.classList.remove('checking'); b.classList.add('verified'); b.textContent = '✓ Verified';
+    toast('ok',`Send verified — Resend delivery confirmed, headers match route lock`);
+  },900);
+}));
+
+/* ================================================================
+   RENDER — activity streams / timeline / people
+   ================================================================ */
+const actRow = a => `<div class="act-row" data-k="${a.k}">
+  <span class="act-time">${a.t}</span>
+  <span class="act-icon ${a.k}">${{send:'→',cron:'⟳',done:'✓',block:'!'}[a.k]}</span>
+  <div class="act-text">${a.html}</div></div>`;
+$('#control-stream').innerHTML = ACTIVITY.slice(0,7).map(actRow).join('');
+$('#live-stream').innerHTML = ACTIVITY.map(actRow).join('');
+
+$('#live-filters').addEventListener('click',e=>{
+  const b = e.target.closest('.fbtn'); if(!b) return;
+  $$('#live-filters .fbtn').forEach(x=>x.classList.toggle('active',x===b));
+  const f = b.dataset.f;
+  $$('#live-stream .act-row').forEach(r=>r.classList.toggle('hidden', f!=='all' && r.dataset.k!==f));
+});
+
+$('#timeline-host').innerHTML = TIMELINE.map(g=>`
+  <div class="tl-day">${g.day}</div>
+  <div class="timeline">${g.rows.map(r=>`
+    <div class="tl-row" data-tone="${r[1]}"><span class="tl-when">${r[0]}</span><div class="tl-what">${r[2]}</div></div>`).join('')}
+  </div>`).join('');
+
+$('#people-grid').innerHTML = PEOPLE.map(p=>`
+  <div class="person panel">
+    <div class="person-head">
+      <div class="person-avatar" style="background:${p.grad}">${p.avatar||p.n.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><div class="person-name">${p.n}</div><div class="person-tag">${p.tag}</div></div>
+    </div>
+    ${p.stats.map(s=>`<div class="person-stat"><span class="k">${s[0]}</span><span class="v">${s[1]}</span></div>`).join('')}
+    <div class="person-foot">${p.chips.map(c=>`<span class="chip ${c[0]}">${c[1]}</span>`).join('')}</div>
+  </div>`).join('');
+
+/* ================================================================
+   VIEW SWITCHING
+   ================================================================ */
+const VIEW_TITLES = {control:'Control Centre',board:'Board',people:'People',timeline:'Timeline',live:'Live activity'};
+function switchView(v){
+  $$('.rail-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  $$('.view').forEach(s=>s.classList.toggle('active',s.dataset.view===v));
+  $('#view-title').textContent = VIEW_TITLES[v]||'Control Centre';
+  $('.main').scrollTop = 0;
+}
+$$('.rail-btn[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+
+/* ================================================================
+   CARD DRAWER
+   ================================================================ */
+const drawer = $('#drawer'), scrim = $('#scrim');
+const STATE_CHIP = {triage:['warn','Triage'],ready:['info','Ready'],progress:['info','In progress'],blocked:['bad','Blocked']};
+
+function openCard(key){
+  const c = CARDS[key]; if(!c) return;
+  $('#d-id').textContent = key;
+  const [tone,label] = STATE_CHIP[c.lane];
+  $('#d-state').innerHTML = `<span class="chip ${tone}">${label}</span>${c.running?' <span class="chip info">● live</span>':''}`;
+  $('#d-title').textContent = c.title;
+  $('#d-meta').innerHTML = `
+    <span>Assignee<b>${c.who}</b></span>
+    <span>Lane<b>${c.id}</b></span>
+    <span>Age<b>${c.age}</b></span>
+    <span>Board<b>board.db · synced</b></span>`;
+
+  let html = `<div class="d-sec"><h3>Body</h3><div class="d-prose">${c.body}</div></div>`;
+
+  html += `<div class="d-sec"><h3>Gates &amp; definition of done</h3><div class="d-gates">${
+    c.gates.map(g=>`<div class="d-gate ${g[1]?'pass':'open'}"><span class="s">${g[1]?'✓':''}</span>${g[0]}</div>`).join('')
+  }</div></div>`;
+
+  if(c.compare){
+    html += `<div class="d-sec"><h3>Compare · Holly's draft vs. Hazel's review</h3>
+    <div class="compare">
+      <div class="cmp-pane">
+        <div class="cmp-head"><span class="avatar-xs" style="background:${PEOPLE_COLORS.Holly}">Ho</span>Holly's draft<span class="rev">rev 3 · 1d ago</span></div>
+        <div class="cmp-body">
+          <p><span class="mark-ok">Wrap every diary emit in <b>dedupeGuard()</b> keyed on entry hash.</span></p>
+          <p>On delivery failure, mark the entry <span class="mark-flag">retried=true globally</span> so the retry path skips re-emission <span class="mark-flag">within a 24 h window</span>.</p>
+          <p><span class="mark-ok">Failures now propagate to the cron exit code</span>, so the watchdog sees a dead channel within one tick.</p>
+        </div>
+      </div>
+      <div class="cmp-pane">
+        <div class="cmp-head"><span class="avatar-xs" style="background:${PEOPLE_COLORS.Hazel}">Ha</span>Hazel's review<span class="rev">block #2 · 4h ago</span></div>
+        <div class="cmp-body">
+          <div class="cmp-note"><span class="n">R1</span><span><b>Global retry flag is wrong.</b> A Telegram failure would suppress the email copy of the same entry. Dedupe must be keyed <b>per-channel</b>: (entry hash, channel).</span></div>
+          <div class="cmp-note"><span class="n">R2</span><span><b>24 h window swallows real edits.</b> A corrected recap re-sent same evening would be deduped away. Window should be per-channel and ≤ 6 h, or hash the rendered body.</span></div>
+          <div class="cmp-note minor"><span class="n">m1</span><span>Guard lacks a unit test for the double-failure path (both channels down).</span></div>
+        </div>
+      </div>
+    </div></div>`;
+  }
+
+  html += `<div class="d-sec d-hist"><h3>Activity</h3>${
+    c.hist.map(h=>`<div class="act-row"><span class="act-time">${h[0]}</span>
+      <span class="avatar-xs" style="background:${PEOPLE_COLORS[h[1]]||'linear-gradient(135deg,#eb5a46,#f3c969)'};margin-top:1px">${initials(h[1])}</span>
+      <div class="act-text"><b>${h[1]}</b> ${h[2]}</div></div>`).join('')
+  }</div>`;
+
+  $('#d-body').innerHTML = html;
+  drawer.classList.add('open'); scrim.classList.add('open');
+  $('#d-body').scrollTop = 0;
+}
+function closeDrawer(){drawer.classList.remove('open');scrim.classList.remove('open')}
+$('#drawer-close').addEventListener('click',closeDrawer);
+scrim.addEventListener('click',closeDrawer);
+
+/* ================================================================
+   INTERRUPT BUDGET
+   ================================================================ */
+let pending = 3, cap = 5;
+const CIRC = 226.2;
+function renderBudget(){
+  const ratio = Math.min(pending/cap,1);
+  const fill = $('#budget-fill');
+  fill.style.strokeDashoffset = CIRC*(1-ratio);
+  /* meter fill carries severity: accent → warn → danger */
+  fill.style.stroke = ratio>=1?'var(--danger)':ratio>=.7?'var(--warn)':'var(--accent)';
+  $('#budget-track').style.stroke = ratio>=1?'rgba(235,90,70,.15)':ratio>=.7?'rgba(243,201,105,.14)':'rgba(0,184,217,.13)';
+  $('#budget-v').textContent = pending;
+  $('#budget-cap-lbl').textContent = cap;
+  $('#cap-val').textContent = cap;
+  $('#budget-word').textContent = ratio>=1?'At capacity.':ratio>=.7?'Getting warm.':'Comfortable.';
+  $('#budget-desc').textContent = `${pending} decision${pending===1?'':'s'} pending, 2 arrived today.`;
+  $('#needs-count').textContent = pending;
+  $('#inbox-badge').textContent = pending;
+  $('#inbox-badge').style.display = pending?'':'none';
+  $('#stat-needs-n').textContent = pending;
+}
+$('#cap-minus').addEventListener('click',()=>{cap=Math.max(1,cap-1);renderBudget();toast('info',`Interrupt cap set to ${cap}/day`)});
+$('#cap-plus').addEventListener('click',()=>{cap=Math.min(12,cap+1);renderBudget();toast('info',`Interrupt cap set to ${cap}/day`)});
+renderBudget();
+
+/* ================================================================
+   NEEDS-TOM actions
+   ================================================================ */
+function resolveNeed(card,msg){
+  card.classList.add('resolved');
+  pending = Math.max(0,pending-1); renderBudget();
+  toast('ok',msg);
+  prependActivity('done',msg);
+  setTimeout(()=>card.remove(),400);
+}
+$('#needs-host').addEventListener('click',e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  const card = btn.closest('.need');
+  if(btn.dataset.act==='thread'){openCard('MYO-75');return}
+  if(btn.dataset.act==='compare'){openCard('MYO-81');return}
+  if(btn.dataset.act==='draft'){toast('info','Draft opened in composer — Henry pre-filled the scheduling link');return}
+  if(btn.dataset.answer){
+    const need = card.dataset.need;
+    if(need==='henry') resolveNeed(card,`Answered Henry: option ${btn.dataset.answer} — routed back to the delegation thread`);
+    else if(need==='hazel') resolveNeed(card,`Ruling recorded: ${btn.dataset.answer==='hazel'?'per-channel dedupe (Hazel)':'24 h window (Holly)'} — MYO-81 unblocked for rev 4`);
+  }
+});
+$('#stat-needs').addEventListener('click',()=>$('#needs-host').scrollIntoView({behavior:'smooth'}));
+$('#rail-inbox').addEventListener('click',()=>{switchView('control');setTimeout(()=>$('#needs-host').scrollIntoView({behavior:'smooth'}),100)});
+
+/* ================================================================
+   ENGAGEMENT LOOP pause / resume
+   ================================================================ */
+let loopLive = true;
+function setLoop(on){
+  loopLive = on;
+  $('#loop-pill').classList.toggle('paused',!on);
+  $('#loop-label').textContent = on?'Engagement loop · live':'Engagement loop · paused';
+  $('#sys-loop').textContent = on?'ON · idle':'PAUSED by Tom';
+  $('#sys-loop').classList.toggle('ok',on);
+  toast(on?'ok':'warn', on?'Engagement loop resumed — dispatcher will tick in 60 s':'Engagement loop paused — no sends until you resume');
+  prependActivity(on?'done':'block', on?'Engagement loop resumed by Tom':'Engagement loop paused by Tom');
+}
+$('#loop-pill').addEventListener('click',()=>setLoop(!loopLive));
+$('#btn-refresh').addEventListener('click',()=>toast('info','Re-pulled from board.db — no changes since 30 s ago'));
+
+/* ================================================================
+   ACTIVITY prepend + TOASTS
+   ================================================================ */
+function nowHMS(){const d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':')}
+function prependActivity(kind,text){
+  const html = actRow({t:nowHMS(),k:kind,html:text});
+  for(const host of ['#control-stream','#live-stream']){
+    const el = document.createElement('div'); el.innerHTML = html;
+    const row = el.firstElementChild; row.classList.add('new');
+    $(host).prepend(row);
+  }
+}
+function toast(kind,msg){
+  const t = document.createElement('div');
+  t.className = `toast ${kind}`;
+  t.innerHTML = `<span class="ti">${{ok:'✓',info:'i',warn:'!'}[kind]}</span><span>${msg}</span>`;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320)},3600);
+}
+
+/* ================================================================
+   COMMAND PALETTE
+   ================================================================ */
+const cmdk = $('#cmdk'), ckInput = $('#cmdk-input'), ckList = $('#cmdk-list');
+let ckSel = 0, ckItems = [];
+
+const COMMANDS = [
+  // slash commands — the useful verbs
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/dispatch</span> Holly on MYO-82',desc:'send to worker loop',
+   run:()=>{toast('ok','Dispatched Holly on MYO-82 — worker loop acknowledged');prependActivity('done','Tom dispatched <b>Holly</b> on <span class="ref">MYO-82</span> via command palette')},
+   kw:'/dispatch holly myo-82 send worker'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/pause</span> engagement loop',desc:'halt all sends',run:()=>setLoop(false),kw:'/pause stop halt loop'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/resume</span> engagement loop',desc:'restart sends',run:()=>setLoop(true),kw:'/resume start loop'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/cap</span> set interrupt budget',desc:'e.g. /cap 4',
+   run:q=>{const m=q.match(/cap\s+(\d+)/);if(m){cap=Math.min(12,Math.max(1,+m[1]));renderBudget()}toast('info',`Interrupt cap set to ${cap}/day`)},kw:'/cap budget interrupt limit'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/verify</span> last outbound send',desc:'trust-ledger check',
+   run:()=>{const b=$('.verify-btn:not(.verified)');if(b)b.click();else toast('ok','All ledger entries already verified')},kw:'/verify send trust ledger check'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/focus</span> MYO-75 · Sam thread',desc:'open card',run:()=>openCard('MYO-75'),kw:'/focus myo-75 sam open'},
+  {g:'Commands',ic:'⌘',lbl:'<span class="slash">/retro</span> draft weekly after-action',desc:'Henry drafts, you edit',
+   run:()=>toast('info','Henry is drafting the weekly retro — it will land in Needs-Tom for sign-off'),kw:'/retro weekly after action review'},
+  // views
+  {g:'Go to',ic:'▦',lbl:'Control Centre',desc:'view',run:()=>switchView('control'),kw:'control centre home dashboard'},
+  {g:'Go to',ic:'▤',lbl:'Board · Trello view',desc:'view',run:()=>switchView('board'),kw:'board trello kanban'},
+  {g:'Go to',ic:'◉',lbl:'People · CRM',desc:'view',run:()=>switchView('people'),kw:'people crm contacts'},
+  {g:'Go to',ic:'◷',lbl:'Timeline',desc:'view',run:()=>switchView('timeline'),kw:'timeline history week'},
+  {g:'Go to',ic:'∿',lbl:'Live activity',desc:'view',run:()=>switchView('live'),kw:'live activity stream logs'},
+  // cards
+  ...Object.entries(CARDS).map(([k,c])=>({g:'Cards',ic:'▢',lbl:`${k.startsWith('MYO')?k+' — ':''}${c.title}`,desc:c.who,run:()=>openCard(k),kw:(k+' '+c.title+' '+c.who).toLowerCase()})),
+  // people
+  ...PEOPLE.slice(0,5).map(p=>({g:'People',ic:'◉',lbl:p.n,desc:p.tag,run:()=>{switchView('people');toast('info',`Opened ${p.n} in People`)},kw:(p.n+' '+p.tag).toLowerCase()})),
+];
+
+function renderCmdk(q){
+  const f = (q||'').toLowerCase().trim();
+  ckItems = COMMANDS.filter(c=>!f || c.kw.includes(f) || c.lbl.toLowerCase().replace(/<[^>]+>/g,'').includes(f)
+    || (f.startsWith('/') && c.kw.startsWith(f.split(' ')[0])));
+  ckSel = 0;
+  if(!ckItems.length){ckList.innerHTML = `<div class="cmdk-empty">No matches for “${q}” — try <span style="font-family:var(--mono);color:var(--accent)">/dispatch</span>, <span style="font-family:var(--mono);color:var(--accent)">/cap 4</span>, a card id, or a name</div>`;return}
+  let html = '', lastG = null;
+  ckItems.forEach((c,i)=>{
+    if(c.g!==lastG){html += `<div class="cmdk-group">${c.g}</div>`;lastG = c.g}
+    html += `<div class="cmdk-item ${i===ckSel?'sel':''}" data-i="${i}"><span class="ic">${c.ic}</span><span class="lbl">${c.lbl}</span><span class="desc">${c.desc}</span></div>`;
+  });
+  ckList.innerHTML = html;
+}
+function moveSel(d){
+  if(!ckItems.length) return;
+  ckSel = (ckSel+d+ckItems.length)%ckItems.length;
+  $$('.cmdk-item').forEach(el=>el.classList.toggle('sel',+el.dataset.i===ckSel));
+  $(`.cmdk-item[data-i="${ckSel}"]`)?.scrollIntoView({block:'nearest'});
+}
+function runSel(){
+  const c = ckItems[ckSel]; if(!c) return;
+  closeCmdk(); c.run(ckInput.value.toLowerCase());
+}
+function openCmdk(){cmdk.classList.add('open');ckInput.value='';renderCmdk('');setTimeout(()=>ckInput.focus(),60)}
+function closeCmdk(){cmdk.classList.remove('open');ckInput.blur()}
+
+ckInput.addEventListener('input',e=>renderCmdk(e.target.value));
+ckInput.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){e.preventDefault();moveSel(1)}
+  else if(e.key==='ArrowUp'){e.preventDefault();moveSel(-1)}
+  else if(e.key==='Enter'){e.preventDefault();runSel()}
+});
+ckList.addEventListener('click',e=>{
+  const item = e.target.closest('.cmdk-item'); if(!item) return;
+  ckSel = +item.dataset.i; runSel();
+});
+cmdk.addEventListener('mousedown',e=>{if(e.target===cmdk)closeCmdk()});
+$('#topbar-search').addEventListener('focus',()=>{$('#topbar-search').blur();openCmdk()});
+
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();cmdk.classList.contains('open')?closeCmdk():openCmdk();return}
+  if(e.key==='Escape'){
+    if(cmdk.classList.contains('open'))closeCmdk();
+    else if(drawer.classList.contains('open'))closeDrawer();
+    return;
+  }
+  if(cmdk.classList.contains('open')||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  const k = e.key.toLowerCase();
+  if(k==='1')switchView('control'); else if(k==='2')switchView('board');
+  else if(k==='3')switchView('people'); else if(k==='4')switchView('timeline');
+  else if(k==='5')switchView('live');
+});
+
+/* welcome */
+setTimeout(()=>toast('info','Preview mode — every control here is wired: try ⌘K, verify a send, or answer Henry'),700);
+</script>
+</body>
+</html>
